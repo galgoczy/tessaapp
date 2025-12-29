@@ -12,8 +12,8 @@ const QuoteSection = ({ opacity = 1 }) => {
 
   // Could be fetched from an API or stored quotes
   const quote = {
-    text: "The secret of getting ahead is getting started.",
-    author: "Mark Twain",
+    text: "The only way to do great work is to love what you do.",
+    author: "Steve Jobs",
   };
 
   return (
