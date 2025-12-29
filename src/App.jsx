@@ -1,0 +1,141 @@
+import React, { useState } from 'react';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import HomeScreen from './components/home/HomeScreen';
+import SettingsScreen from './components/settings/SettingsScreen';
+import NotesScreen from './components/notes/NotesScreen';
+import VoiceOverlay from './components/voice/VoiceOverlay';
+import BriefingOverlay from './components/briefing/BriefingOverlay';
+
+/**
+ * Main App Component
+ *
+ * Manages navigation and global overlays.
+ * Wrapped in ThemeProvider for app-wide theming.
+ */
+
+const AppContent = () => {
+  const { theme } = useTheme();
+
+  // Navigation state
+  const [currentScreen, setCurrentScreen] = useState('home');
+
+  // Overlay states
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [briefingOpen, setBriefingOpen] = useState(false);
+
+  // Navigation handler
+  const navigate = (screen) => {
+    setCurrentScreen(screen);
+  };
+
+  // Render current screen
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case 'settings':
+        return <SettingsScreen onBack={() => navigate('home')} />;
+      case 'notes':
+        return <NotesScreen onBack={() => navigate('home')} />;
+      default:
+        return (
+          <HomeScreen
+            onOpenVoice={() => setVoiceOpen(true)}
+            onOpenBriefing={() => setBriefingOpen(true)}
+            onNavigate={navigate}
+          />
+        );
+    }
+  };
+
+  return (
+    <div style={{
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      maxWidth: 430,
+      margin: '0 auto',
+      background: theme.bg,
+      minHeight: '100vh',
+      transition: 'background 0.4s',
+      position: 'relative',
+    }}>
+      {/* Ambient gradient background */}
+      <div style={{
+        position: 'fixed',
+        top: '-20%',
+        right: '-20%',
+        width: '70%',
+        height: '50%',
+        background: `radial-gradient(circle, ${theme.tertiary}15 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'fixed',
+        bottom: '-10%',
+        left: '-20%',
+        width: '60%',
+        height: '40%',
+        background: `radial-gradient(circle, ${theme.accent}10 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+
+      {/* Current Screen */}
+      {renderScreen()}
+
+      {/* Global Overlays */}
+      <VoiceOverlay
+        isOpen={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+      />
+      <BriefingOverlay
+        isOpen={briefingOpen}
+        onClose={() => setBriefingOpen(false)}
+        onAskTessa={() => {
+          setBriefingOpen(false);
+          setVoiceOpen(true);
+        }}
+      />
+
+      {/* Global Styles */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.06); }
+        }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); opacity: 1; }
+          50% { transform: translateY(6px); opacity: 0.6; }
+        }
+        @keyframes shimmer {
+          0% { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        .shimmer {
+          background: linear-gradient(90deg,
+            ${theme.textSecondary} 0%,
+            ${theme.textSecondary} 35%,
+            ${theme.text} 50%,
+            ${theme.textSecondary} 65%,
+            ${theme.textSecondary} 100%
+          );
+          background-size: 200% 100%;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: shimmer 4s ease-in-out infinite;
+        }
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+const App = () => {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+};
+
+export default App;
