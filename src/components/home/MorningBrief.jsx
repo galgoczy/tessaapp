@@ -24,24 +24,9 @@ const MorningBrief = ({ onClick }) => {
         gap: 14,
       }}
     >
-      {/* Icon */}
-      <div style={{
-        width: 48,
-        height: 48,
-        borderRadius: 14,
-        background: theme.gradient,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 22,
-        boxShadow: `0 4px 12px ${theme.glowColor}`,
-      }}>
-        ☀️
-      </div>
-
       {/* Content */}
       <div style={{ flex: 1 }}>
-        <p style={{ color: theme.text, fontSize: 16, fontWeight: 600, margin: 0 }}>
+        <p style={{ color: theme.accent, fontSize: 16, fontWeight: 600, margin: 0 }}>
           Quick Morning Brief
         </p>
         <p style={{ color: theme.textMuted, fontSize: 13, margin: 0 }}>
@@ -50,7 +35,7 @@ const MorningBrief = ({ onClick }) => {
       </div>
 
       {/* Arrow */}
-      <span style={{ color: theme.textMuted, fontSize: 20 }}>→</span>
+      <span style={{ color: theme.accent, fontSize: 20 }}>→</span>
     </GlassCard>
   );
 };
