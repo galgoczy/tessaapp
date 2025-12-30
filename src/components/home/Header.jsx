@@ -78,7 +78,7 @@ const Icon = ({ name, color, size = 20 }) => {
  * Dark mode toggle is now inside the menu.
  */
 const Header = ({ onNavigate }) => {
-  const { theme, isDark, toggleMode } = useTheme();
+  const { theme, isDark, toggleMode, toggleAccentStyle, isFilledStyle } = useTheme();
   const [showMenu, setShowMenu] = useState(false);
 
   // Get time-based greeting
@@ -127,20 +127,43 @@ const Header = ({ onNavigate }) => {
         </h1>
       </div>
 
-      {/* Avatar with menu */}
-      <div style={{ position: 'relative' }}>
+      {/* Right side: Theme toggle + Avatar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Quick theme toggle button */}
         <button
-          onClick={() => setShowMenu(!showMenu)}
+          onClick={toggleMode}
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #8B7355 0%, #E8D5B7 50%, #4A90A4 100%)',
-            border: `2px solid ${theme.borderGlass}`,
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+            background: theme.surfaceGlass,
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: `1px solid ${theme.borderGlass}`,
             cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s',
           }}
-        />
+        >
+          <Icon name={isDark ? 'sun' : 'moon'} color={theme.accent} size={18} />
+        </button>
+
+        {/* Avatar with menu */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #8B7355 0%, #E8D5B7 50%, #4A90A4 100%)',
+              border: `2px solid ${theme.borderGlass}`,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            }}
+          />
 
         {/* Dropdown menu */}
         {showMenu && (
@@ -220,6 +243,7 @@ const Header = ({ onNavigate }) => {
             </GlassCard>
           </>
         )}
+        </div>
       </div>
     </div>
   );

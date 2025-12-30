@@ -20,12 +20,13 @@ const FloatingButton = ({ onClick }) => {
         transform: 'translateX(-50%)',
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
+        gap: 14,
         background: theme.surfaceGlass,
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        borderRadius: 28,
-        padding: '10px 20px 10px 10px',
+        borderRadius: 32,
+        padding: '12px 28px 12px 12px',
+        minWidth: 220,
         border: `1px solid ${theme.borderGlass}`,
         boxShadow: `0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)`,
         cursor: 'pointer',
@@ -34,8 +35,8 @@ const FloatingButton = ({ onClick }) => {
     >
       {/* Orb icon */}
       <div style={{
-        width: 48,
-        height: 48,
+        width: 54,
+        height: 54,
         borderRadius: '50%',
         background: theme.gradient,
         display: 'flex',
@@ -45,7 +46,7 @@ const FloatingButton = ({ onClick }) => {
         animation: 'pulse 2.5s ease-in-out infinite',
       }}>
         {/* Mic icon */}
-        <svg width={18} height={18} viewBox="0 0 24 24" fill="white">
+        <svg width={20} height={20} viewBox="0 0 24 24" fill="white">
           <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
           <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
         </svg>
@@ -54,8 +55,9 @@ const FloatingButton = ({ onClick }) => {
       {/* Text with shimmer */}
       <span className="shimmer" style={{
         color: theme.text,
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: 500,
+        whiteSpace: 'nowrap',
       }}>
         Let Tessa help you
       </span>

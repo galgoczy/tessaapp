@@ -6,6 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
  *
  * Reusable settings row with icon, label, description,
  * and optional toggle/arrow/pro badge.
+ * Icon can be a string (emoji) or React element (SVG).
  */
 const SettingsItem = ({
   icon,
@@ -26,6 +27,9 @@ const SettingsItem = ({
     }
   };
 
+  // Check if icon is a React element (SVG) or string (emoji)
+  const isReactElement = React.isValidElement(icon);
+
   return (
     <div
       onClick={type === 'toggle' ? handleClick : undefined}
@@ -39,8 +43,14 @@ const SettingsItem = ({
         transition: 'background 0.2s',
       }}
     >
-      {/* Icon */}
-      <span style={{ fontSize: 22 }}>{icon}</span>
+      {/* Icon - supports both emoji strings and SVG React elements */}
+      {isReactElement ? (
+        <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {icon}
+        </div>
+      ) : (
+        <span style={{ fontSize: 22 }}>{icon}</span>
+      )}
 
       {/* Content */}
       <div style={{ flex: 1 }}>

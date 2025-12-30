@@ -37,11 +37,12 @@ export const ThemeProvider = ({ children }) => {
   });
 
   // Accent style: 'filled' (accent bg, white text) or 'outline' (white bg, accent border)
+  // Default is now 'outline'
   const [accentStyle, setAccentStyle] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEYS.ACCENT_STYLE) || 'filled';
+      return localStorage.getItem(STORAGE_KEYS.ACCENT_STYLE) || 'outline';
     }
-    return 'filled';
+    return 'outline';
   });
 
   // Build theme object

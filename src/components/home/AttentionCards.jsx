@@ -11,7 +11,7 @@ import GlassCard from '../ui/GlassCard';
  * - Talk with Tessa shortcut
  */
 const AttentionCards = ({ onOpenVoice }) => {
-  const { theme } = useTheme();
+  const { theme, isFilledStyle } = useTheme();
 
   const tasks = [
     { id: 1, title: 'Meeting with Tom', time: '08:00' },
@@ -26,28 +26,33 @@ const AttentionCards = ({ onOpenVoice }) => {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-      {/* Schedule Card - Gradient, spans 2 rows */}
+      {/* Schedule Card - follows filled/outline theme */}
       <div style={{
-        background: theme.gradient,
+        background: isFilledStyle ? theme.gradient : theme.surfaceGlass,
+        backdropFilter: isFilledStyle ? 'none' : 'blur(16px)',
+        WebkitBackdropFilter: isFilledStyle ? 'none' : 'blur(16px)',
+        border: isFilledStyle ? 'none' : `2px solid ${theme.accent}`,
         borderRadius: 24,
         padding: 18,
         gridRow: 'span 2',
         position: 'relative',
         overflow: 'hidden',
       }}>
-        {/* Highlight overlay */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '40%',
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }} />
+        {/* Highlight overlay - only in filled mode */}
+        {isFilledStyle && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '40%',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%)',
+            pointerEvents: 'none',
+          }} />
+        )}
 
         <p style={{
-          color: 'white',
+          color: isFilledStyle ? 'white' : theme.accent,
           fontSize: 14,
           fontWeight: 600,
           marginBottom: 14,
@@ -58,17 +63,18 @@ const AttentionCards = ({ onOpenVoice }) => {
 
         {tasks.map((task, i) => (
           <div key={task.id} style={{
-            background: 'rgba(255,255,255,0.15)',
+            background: isFilledStyle ? 'rgba(255,255,255,0.15)' : theme.surface,
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
             borderRadius: 12,
             padding: 12,
             marginBottom: i < tasks.length - 1 ? 8 : 0,
+            border: isFilledStyle ? 'none' : `1px solid ${theme.border}`,
           }}>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, margin: '0 0 2px' }}>
+            <p style={{ color: isFilledStyle ? 'rgba(255,255,255,0.7)' : theme.textMuted, fontSize: 10, margin: '0 0 2px' }}>
               {task.time}
             </p>
-            <p style={{ color: 'white', fontSize: 12, fontWeight: 500, margin: 0 }}>
+            <p style={{ color: isFilledStyle ? 'white' : theme.text, fontSize: 12, fontWeight: 500, margin: 0 }}>
               {task.title}
             </p>
           </div>

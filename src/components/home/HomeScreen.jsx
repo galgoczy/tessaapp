@@ -66,15 +66,15 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
       }}>
         <Header onNavigate={onNavigate} />
 
-        <MorningBrief onClick={onOpenBriefing} />
-
         <QuoteSection opacity={quoteOpacity} />
 
-        {/* Your Stuff indicator */}
+        <MorningBrief onClick={onOpenBriefing} />
+
+        {/* Your Stuff indicator - positioned to be visible above floating button */}
         <div style={{
           textAlign: 'center',
-          paddingTop: 0,
-          paddingBottom: 30,
+          marginTop: -20,
+          paddingBottom: 120,
           opacity: quoteOpacity,
           transition: 'opacity 0.5s',
         }}>
