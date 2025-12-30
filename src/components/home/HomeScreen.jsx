@@ -57,32 +57,9 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
         pointerEvents: 'none',
       }} />
 
-      {/* Status bar */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        maxWidth: 430,
-        margin: '0 auto',
-        padding: '12px 20px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontSize: 14,
-        fontWeight: 500,
-        color: theme.text,
-        background: `${theme.bg}cc`,
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        zIndex: 100,
-      }}>
-        <span>10:30</span>
-        <span>📶 🔋</span>
-      </div>
-
       {/* Hero Section */}
       <div style={{
-        padding: '70px 20px 0',
+        padding: '40px 20px 0',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',

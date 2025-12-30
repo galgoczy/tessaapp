@@ -1,20 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 
 /**
  * QuoteSection Component
  *
- * Displays daily inspirational quote.
+ * Displays rotating inspirational quotes.
  * Fades out as user scrolls down.
  */
 const QuoteSection = ({ opacity = 1 }) => {
   const { theme } = useTheme();
+  const [quoteIndex, setQuoteIndex] = useState(0);
+  const [fadeIn, setFadeIn] = useState(true);
 
-  // Could be fetched from an API or stored quotes
-  const quote = {
-    text: "The only way to do great work is to love what you do.",
-    author: "Steve Jobs",
-  };
+  const quotes = [
+    {
+      text: "The only way to do great work is to love what you do.",
+      author: "Steve Jobs",
+    },
+    {
+      text: "The secret of getting ahead is getting started.",
+      author: "Mark Twain",
+    },
+    {
+      text: "It always seems impossible until it's done.",
+      author: "Nelson Mandela",
+    },
+    {
+      text: "The future belongs to those who believe in the beauty of their dreams.",
+      author: "Eleanor Roosevelt",
+    },
+    {
+      text: "Do what you can, with what you have, where you are.",
+      author: "Theodore Roosevelt",
+    },
+  ];
+
+  // Rotate quotes every 8 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFadeIn(false);
+      setTimeout(() => {
+        setQuoteIndex((prev) => (prev + 1) % quotes.length);
+        setFadeIn(true);
+      }, 500);
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [quotes.length]);
+
+  const quote = quotes[quoteIndex];
 
   return (
     <div style={{
@@ -49,12 +83,19 @@ const QuoteSection = ({ opacity = 1 }) => {
         lineHeight: 1.4,
         margin: '0 0 12px',
         maxWidth: 300,
+        opacity: fadeIn ? 1 : 0,
+        transition: 'opacity 0.5s',
       }}>
         "{quote.text}"
       </p>
 
       {/* Author */}
-      <p style={{ color: theme.textSecondary, fontSize: 14 }}>
+      <p style={{
+        color: theme.textSecondary,
+        fontSize: 14,
+        opacity: fadeIn ? 1 : 0,
+        transition: 'opacity 0.5s',
+      }}>
         — {quote.author}
       </p>
     </div>
