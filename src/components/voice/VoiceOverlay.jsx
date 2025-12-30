@@ -7,6 +7,7 @@ import WaveAnimation from './WaveAnimation';
  * VoiceOverlay Component
  *
  * Voice interaction modal with wave animation and centered mic button.
+ * Closes on X button or clicking outside the modal.
  */
 const VoiceOverlay = ({ isOpen, onClose }) => {
   const { theme } = useTheme();
@@ -34,19 +35,29 @@ const VoiceOverlay = ({ isOpen, onClose }) => {
 
   const suggestions = ['My day', 'Emails', 'New task', 'Notes'];
 
+  // Handle backdrop click
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: theme.overlayBg,
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
-      zIndex: 1000,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 20,
-    }}>
+    <div
+      onClick={handleBackdropClick}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: theme.overlayBg,
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+      }}
+    >
       <GlassCard theme={theme} style={{
         width: '100%',
         maxWidth: 380,
@@ -79,35 +90,44 @@ const VoiceOverlay = ({ isOpen, onClose }) => {
           ×
         </button>
 
-        {/* Title */}
+        {/* Title - centered */}
         <p style={{
           color: theme.textSecondary,
           fontSize: 13,
           letterSpacing: 1,
           marginBottom: 16,
+          textAlign: 'center',
+          width: '100%',
         }}>
           Talk with Tessa
         </p>
 
-        {/* Status text */}
+        {/* Status text - centered */}
         <p style={{
           color: theme.text,
           fontSize: 18,
           fontWeight: 500,
           marginBottom: 24,
           textAlign: 'center',
+          width: '100%',
         }}>
           {isListening ? 'Listening...' : 'Tap and hold to speak'}
         </p>
 
-        {/* Wave animation - accent colors */}
-        <WaveAnimation
-          phase={wavePhase}
-          isActive={isListening}
-          colors={[theme.accent, theme.accentLight, theme.secondary]}
-        />
+        {/* Wave animation - centered */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          width: '100%',
+        }}>
+          <WaveAnimation
+            phase={wavePhase}
+            isActive={isListening}
+            colors={[theme.accent, theme.accentLight, theme.secondary]}
+          />
+        </div>
 
-        {/* Centered mic button container */}
+        {/* Centered mic button */}
         <div style={{
           display: 'flex',
           justifyContent: 'center',
@@ -115,7 +135,6 @@ const VoiceOverlay = ({ isOpen, onClose }) => {
           width: '100%',
           marginBottom: 32,
         }}>
-          {/* Microphone button with pulse */}
           <button
             className="mic-button"
             onMouseDown={() => setIsListening(true)}
