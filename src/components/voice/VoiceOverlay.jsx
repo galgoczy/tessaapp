@@ -107,42 +107,52 @@ const VoiceOverlay = ({ isOpen, onClose }) => {
           colors={[theme.accent, theme.accentLight, theme.secondary]}
         />
 
-        {/* Microphone button - centered */}
-        <button
-          onMouseDown={() => setIsListening(true)}
-          onMouseUp={() => setIsListening(false)}
-          onMouseLeave={() => setIsListening(false)}
-          onTouchStart={() => setIsListening(true)}
-          onTouchEnd={() => setIsListening(false)}
-          style={{
-            width: 80,
-            height: 80,
-            borderRadius: '50%',
-            background: isListening ? theme.accent : theme.surfaceGlass,
-            border: `2px solid ${isListening ? theme.accent : theme.borderGlass}`,
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s',
-            boxShadow: isListening
-              ? `0 0 32px ${theme.glowColor}`
-              : '0 4px 16px rgba(0,0,0,0.1)',
-            marginBottom: 32,
-          }}
-        >
-          <svg
-            width={28}
-            height={28}
-            viewBox="0 0 24 24"
-            fill={isListening ? 'white' : theme.accent}
+        {/* Centered mic button container */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: '100%',
+          marginBottom: 32,
+        }}>
+          {/* Microphone button with pulse */}
+          <button
+            className="mic-button"
+            onMouseDown={() => setIsListening(true)}
+            onMouseUp={() => setIsListening(false)}
+            onMouseLeave={() => setIsListening(false)}
+            onTouchStart={() => setIsListening(true)}
+            onTouchEnd={() => setIsListening(false)}
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              background: isListening ? theme.accent : theme.surfaceGlass,
+              border: `2px solid ${isListening ? theme.accent : theme.borderGlass}`,
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.2s, border 0.2s, box-shadow 0.2s',
+              boxShadow: isListening
+                ? `0 0 32px ${theme.glowColor}`
+                : '0 4px 16px rgba(0,0,0,0.1)',
+              animation: isListening ? 'none' : 'micPulse 2.5s ease-in-out infinite',
+            }}
           >
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
-          </svg>
-        </button>
+            <svg
+              width={28}
+              height={28}
+              viewBox="0 0 24 24"
+              fill={isListening ? 'white' : theme.accent}
+            >
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
+            </svg>
+          </button>
+        </div>
 
         {/* Suggestion chips */}
         <div style={{
@@ -179,6 +189,14 @@ const VoiceOverlay = ({ isOpen, onClose }) => {
           ))}
         </div>
       </GlassCard>
+
+      {/* Pulse animation */}
+      <style>{`
+        @keyframes micPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+      `}</style>
     </div>
   );
 };
