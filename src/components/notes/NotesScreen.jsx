@@ -4,7 +4,7 @@ import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import TagPicker from '../ui/TagPicker';
 import CategoryPicker from '../ui/CategoryPicker';
-import { NOTE_TYPES } from '../../data/models';
+import CategoryIcon from '../ui/CategoryIcon';
 
 // SVG Icons
 const Icons = {
@@ -38,7 +38,7 @@ const Icons = {
  * Features: categories, tags, note types, search.
  */
 const NotesScreen = ({ onBack }) => {
-  const { theme, isFilledStyle } = useTheme();
+  const { theme } = useTheme();
   const {
     notes,
     categories,
@@ -50,7 +50,6 @@ const NotesScreen = ({ onBack }) => {
     getTagById,
   } = useData();
 
-  const [activeFilter, setActiveFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddNote, setShowAddNote] = useState(false);
@@ -71,9 +70,6 @@ const NotesScreen = ({ onBack }) => {
 
     // Category filter
     if (categoryFilter !== 'all' && note.categoryId !== categoryFilter) return false;
-
-    // Type filter
-    if (activeFilter !== 'all' && note.type !== activeFilter) return false;
 
     // Search filter
     if (searchQuery) {
@@ -112,7 +108,6 @@ const NotesScreen = ({ onBack }) => {
     setShowAddNote(false);
   };
 
-  const getNoteTypeInfo = (typeId) => NOTE_TYPES.find(t => t.id === typeId) || NOTE_TYPES[4];
   const getCategoryById = (id) => categories.find(c => c.id === id);
 
   const formatDate = (dateStr) => {
@@ -249,61 +244,12 @@ const NotesScreen = ({ onBack }) => {
                 gap: 6,
               }}
             >
-              <span>{cat.icon}</span>
+              <CategoryIcon
+                iconId={cat.icon}
+                color={categoryFilter === cat.id ? cat.color : theme.textMuted}
+                size={14}
+              />
               {cat.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Type filters */}
-        <div style={{
-          display: 'flex',
-          gap: 8,
-          overflowX: 'auto',
-        }}>
-          <button
-            onClick={() => setActiveFilter('all')}
-            style={{
-              padding: '8px 14px',
-              background: activeFilter === 'all'
-                ? (isFilledStyle ? theme.accent : 'transparent')
-                : theme.surfaceGlass,
-              border: activeFilter === 'all'
-                ? `2px solid ${theme.accent}`
-                : `1px solid ${theme.borderGlass}`,
-              borderRadius: 20,
-              color: activeFilter === 'all'
-                ? (isFilledStyle ? 'white' : theme.accent)
-                : theme.textMuted,
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            All
-          </button>
-          {NOTE_TYPES.map(type => (
-            <button
-              key={type.id}
-              onClick={() => setActiveFilter(type.id)}
-              style={{
-                padding: '8px 14px',
-                background: activeFilter === type.id ? `${type.color}20` : theme.surfaceGlass,
-                border: `1px solid ${activeFilter === type.id ? type.color : theme.borderGlass}`,
-                borderRadius: 20,
-                color: activeFilter === type.id ? type.color : theme.textMuted,
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: 'pointer',
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <span>{type.icon}</span>
-              {type.label}
             </button>
           ))}
         </div>
@@ -331,60 +277,13 @@ const NotesScreen = ({ onBack }) => {
               }}
             />
 
-            <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div style={{ marginBottom: 16 }}>
               <CategoryPicker
                 selectedCategoryId={newNote.categoryId}
                 onCategoryChange={(id) => setNewNote({ ...newNote, categoryId: id })}
                 compact
               />
-
-              {/* Type selector */}
-              <div style={{ display: 'flex', gap: 4 }}>
-                {NOTE_TYPES.map(type => (
-                  <button
-                    key={type.id}
-                    onClick={() => setNewNote({ ...newNote, type: type.id })}
-                    title={type.label}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 10,
-                      background: newNote.type === type.id ? `${type.color}20` : 'transparent',
-                      border: `1px solid ${newNote.type === type.id ? type.color : theme.border}`,
-                      cursor: 'pointer',
-                      fontSize: 18,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {type.icon}
-                  </button>
-                ))}
-              </div>
             </div>
-
-            {/* Related person (for person/gift types) */}
-            {(newNote.type === 'person' || newNote.type === 'gift') && (
-              <div style={{ marginBottom: 16 }}>
-                <input
-                  type="text"
-                  placeholder="Related person..."
-                  value={newNote.relatedPerson}
-                  onChange={(e) => setNewNote({ ...newNote, relatedPerson: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    background: theme.surface,
-                    border: `1px solid ${theme.border}`,
-                    borderRadius: 10,
-                    color: theme.text,
-                    fontSize: 14,
-                    outline: 'none',
-                  }}
-                />
-              </div>
-            )}
 
             {/* Tags */}
             <div style={{ marginBottom: 16 }}>

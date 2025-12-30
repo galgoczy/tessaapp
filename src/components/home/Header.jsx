@@ -104,15 +104,15 @@ const Header = ({ onNavigate, onOpenSearch }) => {
   };
 
   const menuItems = [
+    { icon: 'account', label: 'Account', screen: 'account' },
     { icon: 'search', label: 'Search', action: 'search' },
-    { icon: 'categories', label: 'Categories', screen: 'categories' },
     { icon: 'settings', label: 'Settings', screen: 'settings' },
+    { icon: 'categories', label: 'Categories', screen: 'categories' },
     { icon: 'notes', label: 'Notes', screen: 'notes' },
     { icon: 'mail', label: 'Mail', screen: 'mail' },
     { icon: 'calendar', label: 'Calendars', screen: 'calendars' },
     { icon: 'tasks', label: 'Tasks', screen: 'tasks' },
     { icon: 'projects', label: 'Projects', screen: 'projects' },
-    { icon: 'account', label: 'Account', screen: 'account' },
   ];
 
   const handleMenuClick = (item) => {
@@ -222,37 +222,6 @@ const Header = ({ onNavigate, onOpenSearch }) => {
                 padding: 8,
               }}
             >
-              {/* Theme toggle */}
-              <button
-                onClick={handleThemeToggle}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  background: 'none',
-                  border: 'none',
-                  borderRadius: 10,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  cursor: 'pointer',
-                  color: theme.text,
-                  fontSize: 14,
-                  transition: 'background 0.2s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = theme.surface}
-                onMouseLeave={e => e.currentTarget.style.background = 'none'}
-              >
-                <Icon name={isDark ? 'sun' : 'moon'} color={theme.accent} />
-                {isDark ? 'Light Mode' : 'Dark Mode'}
-              </button>
-
-              {/* Divider */}
-              <div style={{
-                height: 1,
-                background: theme.border,
-                margin: '4px 8px',
-              }} />
-
               {/* Menu items */}
               {menuItems.map((item) => (
                 <button
@@ -279,6 +248,37 @@ const Header = ({ onNavigate, onOpenSearch }) => {
                   {item.label}
                 </button>
               ))}
+
+              {/* Divider */}
+              <div style={{
+                height: 1,
+                background: theme.border,
+                margin: '4px 8px',
+              }} />
+
+              {/* Theme toggle - at bottom */}
+              <button
+                onClick={handleThemeToggle}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  background: 'none',
+                  border: 'none',
+                  borderRadius: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  cursor: 'pointer',
+                  color: theme.text,
+                  fontSize: 14,
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = theme.surface}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                <Icon name={isDark ? 'sun' : 'moon'} color={theme.accent} />
+                {isDark ? 'Light Mode' : 'Dark Mode'}
+              </button>
             </GlassCard>
           </>
         )}

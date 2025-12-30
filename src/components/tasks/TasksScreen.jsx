@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import TagPicker from '../ui/TagPicker';
 import CategoryPicker from '../ui/CategoryPicker';
+import CategoryIcon from '../ui/CategoryIcon';
 
 // SVG Icons
 const Icons = {
@@ -240,7 +241,11 @@ const TasksScreen = ({ onBack }) => {
                 gap: 6,
               }}
             >
-              <span>{cat.icon}</span>
+              <CategoryIcon
+                iconId={cat.icon}
+                color={categoryFilter === cat.id ? cat.color : theme.textMuted}
+                size={14}
+              />
               {cat.name}
             </button>
           ))}
