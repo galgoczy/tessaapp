@@ -136,6 +136,46 @@ const CalendarsScreen = ({ onBack }) => {
     },
   ];
 
+  // Get items for selected day (events + tasks with due dates)
+  const selectedDayItems = useMemo(() => {
+    const items = [];
+    const selectedDateStr = selectedDate.toDateString();
+
+    // Add sample events for today (in real app, filter by date)
+    const today = new Date().toDateString();
+    if (selectedDateStr === today) {
+      sampleEvents.forEach(event => {
+        items.push({
+          ...event,
+          type: 'event',
+          sortTime: event.startTime,
+        });
+      });
+    }
+
+    // Add tasks with due dates matching selected day
+    tasks.filter(t => t.dueDate && !t.isCompleted).forEach(task => {
+      const dueDate = new Date(task.dueDate);
+      if (dueDate.toDateString() === selectedDateStr) {
+        const cat = categories.find(c => c.id === task.categoryId);
+        items.push({
+          id: task.id,
+          title: task.title,
+          type: 'task',
+          sortTime: dueDate,
+          dueDate: dueDate,
+          priority: task.priority,
+          categoryName: cat?.name || 'Uncategorized',
+          color: cat?.color || theme.accent,
+          isCompleted: task.isCompleted,
+        });
+      }
+    });
+
+    // Sort by time
+    return items.sort((a, b) => a.sortTime - b.sortTime);
+  }, [selectedDate, tasks, categories, theme.accent]);
+
   // Get tasks with due dates for Next Up mode
   const upcomingItems = useMemo(() => {
     const now = new Date();
@@ -712,7 +752,7 @@ const CalendarsScreen = ({ onBack }) => {
           </>
         )}
 
-        {/* Day events (for week/month view) */}
+        {/* Day events and tasks (for week/month view) */}
         {viewMode !== 'nextup' && (
           <>
             <p style={{
@@ -726,51 +766,100 @@ const CalendarsScreen = ({ onBack }) => {
               {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
 
-            {sampleEvents.length === 0 ? (
+            {selectedDayItems.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px' }}>
                 <p style={{ fontSize: 48, marginBottom: 16 }}>📅</p>
-                <p style={{ color: theme.textMuted, fontSize: 16 }}>No events today</p>
+                <p style={{ color: theme.textMuted, fontSize: 16 }}>No events or tasks</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {sampleEvents.map(event => (
-                  <GlassCard key={event.id} theme={theme} style={{ padding: 0, overflow: 'hidden' }}>
+                {selectedDayItems.map(item => (
+                  <GlassCard key={item.id} theme={theme} style={{ padding: 0, overflow: 'hidden' }}>
                     <div style={{ display: 'flex' }}>
                       {/* Color bar */}
                       <div style={{
                         width: 4,
-                        background: event.color,
+                        background: item.color,
                       }} />
 
                       <div style={{ flex: 1, padding: 16 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div>
+                          <div style={{ flex: 1 }}>
+                            {/* Type badge */}
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              background: `${item.color}20`,
+                              color: item.color,
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              fontSize: 10,
+                              fontWeight: 600,
+                              marginBottom: 6,
+                            }}>
+                              {item.type === 'task' ? Icons.task(item.color) : Icons.clock(item.color)}
+                              {item.type === 'task' ? 'TASK' : 'EVENT'}
+                            </div>
+
                             <p style={{
                               color: theme.text,
                               fontSize: 15,
                               fontWeight: 600,
                               margin: 0,
                             }}>
-                              {event.title}
+                              {item.title}
                             </p>
 
                             <div style={{
                               display: 'flex',
                               gap: 12,
                               marginTop: 8,
+                              flexWrap: 'wrap',
                             }}>
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                color: theme.textMuted,
-                                fontSize: 12,
-                              }}>
-                                {Icons.clock(theme.textMuted)}
-                                {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                              </div>
+                              {/* Time for events */}
+                              {item.type === 'event' && (
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  color: theme.textMuted,
+                                  fontSize: 12,
+                                }}>
+                                  {Icons.clock(theme.textMuted)}
+                                  {formatTime(item.startTime)} - {formatTime(item.endTime)}
+                                </div>
+                              )}
 
-                              {event.location && (
+                              {/* Category for tasks */}
+                              {item.type === 'task' && item.categoryName && (
+                                <span style={{
+                                  fontSize: 11,
+                                  color: theme.textSecondary,
+                                  background: theme.surface,
+                                  padding: '2px 8px',
+                                  borderRadius: 6,
+                                }}>
+                                  {item.categoryName}
+                                </span>
+                              )}
+
+                              {/* Priority for tasks */}
+                              {item.type === 'task' && item.priority === 'high' && (
+                                <span style={{
+                                  fontSize: 10,
+                                  color: '#EF4444',
+                                  background: '#EF444420',
+                                  padding: '2px 8px',
+                                  borderRadius: 6,
+                                  fontWeight: 600,
+                                }}>
+                                  HIGH
+                                </span>
+                              )}
+
+                              {/* Location for events */}
+                              {item.location && (
                                 <div style={{
                                   display: 'flex',
                                   alignItems: 'center',
@@ -779,19 +868,21 @@ const CalendarsScreen = ({ onBack }) => {
                                   fontSize: 12,
                                 }}>
                                   {Icons.location(theme.textMuted)}
-                                  {event.location}
+                                  {item.location}
                                 </div>
                               )}
                             </div>
                           </div>
 
-                          {/* Calendar source indicator */}
-                          <div style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            background: calendarSourceColors[event.calendarSource],
-                          }} />
+                          {/* Calendar source indicator for events */}
+                          {item.type === 'event' && (
+                            <div style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              background: calendarSourceColors[item.calendarSource],
+                            }} />
+                          )}
                         </div>
                       </div>
                     </div>
