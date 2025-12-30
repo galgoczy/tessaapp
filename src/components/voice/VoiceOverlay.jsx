@@ -1,16 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import GlassCard from '../ui/GlassCard';
+import WaveAnimation from './WaveAnimation';
 
 /**
  * VoiceOverlay Component
  *
- * Simplified voice interaction modal.
- * Features centered microphone button with push-to-talk.
+ * Voice interaction modal with wave animation and centered mic button.
  */
 const VoiceOverlay = ({ isOpen, onClose }) => {
   const { theme } = useTheme();
   const [isListening, setIsListening] = useState(false);
+  const [wavePhase, setWavePhase] = useState(0);
+
+  // Animate wave when overlay is open
+  useEffect(() => {
+    if (isOpen) {
+      const interval = setInterval(() => {
+        setWavePhase(p => p + 0.12);
+      }, 50);
+      return () => clearInterval(interval);
+    }
+  }, [isOpen]);
 
   // Reset listening state when closing
   useEffect(() => {
@@ -83,13 +94,20 @@ const VoiceOverlay = ({ isOpen, onClose }) => {
           color: theme.text,
           fontSize: 18,
           fontWeight: 500,
-          marginBottom: 40,
+          marginBottom: 24,
           textAlign: 'center',
         }}>
           {isListening ? 'Listening...' : 'Tap and hold to speak'}
         </p>
 
-        {/* Microphone button - centered, simple */}
+        {/* Wave animation - accent colors */}
+        <WaveAnimation
+          phase={wavePhase}
+          isActive={isListening}
+          colors={[theme.accent, theme.accentLight, theme.secondary]}
+        />
+
+        {/* Microphone button - centered */}
         <button
           onMouseDown={() => setIsListening(true)}
           onMouseUp={() => setIsListening(false)}
@@ -112,7 +130,7 @@ const VoiceOverlay = ({ isOpen, onClose }) => {
             boxShadow: isListening
               ? `0 0 32px ${theme.glowColor}`
               : '0 4px 16px rgba(0,0,0,0.1)',
-            marginBottom: 40,
+            marginBottom: 32,
           }}
         >
           <svg
