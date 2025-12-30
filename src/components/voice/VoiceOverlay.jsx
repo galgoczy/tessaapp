@@ -1,33 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import GlassCard from '../ui/GlassCard';
-import TessaOrb from './TessaOrb';
-import WaveAnimation from './WaveAnimation';
 
 /**
  * VoiceOverlay Component
  *
- * Full-screen modal for voice interaction with Tessa.
- * Features:
- * - Animated wave visualization
- * - Tessa orb with pulse effect
- * - Push-to-talk microphone button
- * - Quick suggestion chips
+ * Simplified voice interaction modal.
+ * Features centered microphone button with push-to-talk.
  */
 const VoiceOverlay = ({ isOpen, onClose }) => {
   const { theme } = useTheme();
   const [isListening, setIsListening] = useState(false);
-  const [wavePhase, setWavePhase] = useState(0);
-
-  // Animate wave when overlay is open
-  useEffect(() => {
-    if (isOpen) {
-      const interval = setInterval(() => {
-        setWavePhase(p => p + 0.12);
-      }, 50);
-      return () => clearInterval(interval);
-    }
-  }, [isOpen]);
 
   // Reset listening state when closing
   useEffect(() => {
@@ -100,29 +83,13 @@ const VoiceOverlay = ({ isOpen, onClose }) => {
           color: theme.text,
           fontSize: 18,
           fontWeight: 500,
-          marginBottom: 24,
+          marginBottom: 40,
           textAlign: 'center',
         }}>
           {isListening ? 'Listening...' : 'Tap and hold to speak'}
         </p>
 
-        {/* Wave animation */}
-        <WaveAnimation
-          phase={wavePhase}
-          isActive={isListening}
-          colors={[theme.accent, theme.secondary, theme.tertiary]}
-        />
-
-        {/* Tessa Orb */}
-        <div style={{ marginBottom: 24 }}>
-          <TessaOrb
-            size={80}
-            active={isListening}
-            theme={theme}
-          />
-        </div>
-
-        {/* Microphone button */}
+        {/* Microphone button - centered, simple */}
         <button
           onMouseDown={() => setIsListening(true)}
           onMouseUp={() => setIsListening(false)}
@@ -130,25 +97,29 @@ const VoiceOverlay = ({ isOpen, onClose }) => {
           onTouchStart={() => setIsListening(true)}
           onTouchEnd={() => setIsListening(false)}
           style={{
-            width: 60,
-            height: 60,
+            width: 80,
+            height: 80,
             borderRadius: '50%',
-            background: isListening ? theme.secondary : theme.surfaceGlass,
-            border: `2px solid ${isListening ? theme.secondary : theme.border}`,
+            background: isListening ? theme.accent : theme.surfaceGlass,
+            border: `2px solid ${isListening ? theme.accent : theme.borderGlass}`,
             backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 0.2s',
-            boxShadow: isListening ? `0 0 24px ${theme.secondary}40` : 'none',
+            boxShadow: isListening
+              ? `0 0 32px ${theme.glowColor}`
+              : '0 4px 16px rgba(0,0,0,0.1)',
+            marginBottom: 40,
           }}
         >
           <svg
-            width={22}
-            height={22}
+            width={28}
+            height={28}
             viewBox="0 0 24 24"
-            fill={isListening ? 'white' : theme.textMuted}
+            fill={isListening ? 'white' : theme.accent}
           >
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
             <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
@@ -157,7 +128,6 @@ const VoiceOverlay = ({ isOpen, onClose }) => {
 
         {/* Suggestion chips */}
         <div style={{
-          marginTop: 24,
           display: 'flex',
           gap: 8,
           flexWrap: 'wrap',
