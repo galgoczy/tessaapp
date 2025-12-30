@@ -61,6 +61,12 @@ const Icon = ({ name, color, size = 20 }) => {
         <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
       </svg>
     ),
+    search: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+    ),
     moon: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
@@ -77,7 +83,7 @@ const Icon = ({ name, color, size = 20 }) => {
  * Displays greeting, user name, and avatar with dropdown menu.
  * Dark mode toggle is now inside the menu.
  */
-const Header = ({ onNavigate }) => {
+const Header = ({ onNavigate, onOpenSearch }) => {
   const { theme, isDark, toggleMode, toggleAccentStyle, isFilledStyle } = useTheme();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -90,6 +96,7 @@ const Header = ({ onNavigate }) => {
   };
 
   const menuItems = [
+    { icon: 'search', label: 'Search', action: 'search' },
     { icon: 'settings', label: 'Settings', screen: 'settings' },
     { icon: 'notes', label: 'Notes', screen: 'notes' },
     { icon: 'mail', label: 'Mail', screen: 'mail' },
@@ -99,10 +106,12 @@ const Header = ({ onNavigate }) => {
     { icon: 'account', label: 'Account', screen: 'account' },
   ];
 
-  const handleMenuClick = (screen) => {
+  const handleMenuClick = (item) => {
     setShowMenu(false);
-    if (onNavigate) {
-      onNavigate(screen);
+    if (item.action === 'search' && onOpenSearch) {
+      onOpenSearch();
+    } else if (item.screen && onNavigate) {
+      onNavigate(item.screen);
     }
   };
 
@@ -127,8 +136,29 @@ const Header = ({ onNavigate }) => {
         </h1>
       </div>
 
-      {/* Right side: Theme toggle + Avatar */}
+      {/* Right side: Search + Theme toggle + Avatar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Search button */}
+        <button
+          onClick={onOpenSearch}
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+            background: theme.surfaceGlass,
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: `1px solid ${theme.borderGlass}`,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s',
+          }}
+        >
+          <Icon name="search" color={theme.accent} size={18} />
+        </button>
+
         {/* Quick theme toggle button */}
         <button
           onClick={toggleMode}
@@ -218,7 +248,7 @@ const Header = ({ onNavigate }) => {
               {menuItems.map((item) => (
                 <button
                   key={item.label}
-                  onClick={() => handleMenuClick(item.screen)}
+                  onClick={() => handleMenuClick(item)}
                   style={{
                     width: '100%',
                     padding: '12px 14px',

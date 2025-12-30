@@ -6,6 +6,7 @@ import MorningBrief from './MorningBrief';
 import QuoteSection from './QuoteSection';
 import AttentionCards from './AttentionCards';
 import FloatingButton from './FloatingButton';
+import GlobalSearch from '../search/GlobalSearch';
 
 /**
  * HomeScreen Component
@@ -21,6 +22,7 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
   const { theme } = useTheme();
   const [scrollY, setScrollY] = useState(0);
   const [bgPulse, setBgPulse] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
 
   const scrollThreshold = 250;
   const quoteOpacity = Math.max(0, 1 - scrollY / scrollThreshold);
@@ -64,7 +66,7 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
         display: 'flex',
         flexDirection: 'column',
       }}>
-        <Header onNavigate={onNavigate} />
+        <Header onNavigate={onNavigate} onOpenSearch={() => setShowSearch(true)} />
 
         <QuoteSection opacity={quoteOpacity} />
 
@@ -98,6 +100,34 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
         opacity: contentOpacity,
         transition: 'opacity 0.6s ease-out',
       }}>
+        {/* Search bar */}
+        <button
+          onClick={() => setShowSearch(true)}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '14px 18px',
+            marginBottom: 24,
+            background: theme.surfaceGlass,
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: `1px solid ${theme.borderGlass}`,
+            borderRadius: 16,
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.textMuted} strokeWidth="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <span style={{ color: theme.textMuted, fontSize: 15 }}>
+            Search tasks, notes, projects...
+          </span>
+        </button>
+
         {/* Recent topics */}
         <div style={{ marginBottom: 24 }}>
           <p style={{ color: theme.textSecondary, fontSize: 13, marginBottom: 12, fontWeight: 500 }}>Recent</p>
@@ -118,6 +148,28 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
 
       {/* Floating button */}
       <FloatingButton onClick={onOpenVoice} />
+
+      {/* Global Search Overlay */}
+      <GlobalSearch
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+        onResultSelect={(result) => {
+          // Navigate to the appropriate screen based on result type
+          if (result.type === 'task') {
+            onNavigate('tasks');
+          } else if (result.type === 'note') {
+            onNavigate('notes');
+          } else if (result.type === 'project') {
+            onNavigate('projects');
+          } else if (result.type === 'event') {
+            onNavigate('calendars');
+          } else if (result.type === 'contact') {
+            onNavigate('account');
+          } else if (result.type === 'email') {
+            onNavigate('mail');
+          }
+        }}
+      />
     </>
   );
 };
