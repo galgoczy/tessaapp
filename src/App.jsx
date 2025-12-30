@@ -3,6 +3,11 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import HomeScreen from './components/home/HomeScreen';
 import SettingsScreen from './components/settings/SettingsScreen';
 import NotesScreen from './components/notes/NotesScreen';
+import TasksScreen from './components/tasks/TasksScreen';
+import CalendarsScreen from './components/calendar/CalendarsScreen';
+import MailScreen from './components/mail/MailScreen';
+import ProjectsScreen from './components/projects/ProjectsScreen';
+import AccountScreen from './components/account/AccountScreen';
 import VoiceOverlay from './components/voice/VoiceOverlay';
 import BriefingOverlay from './components/briefing/BriefingOverlay';
 
@@ -35,6 +40,16 @@ const AppContent = () => {
         return <SettingsScreen onBack={() => navigate('home')} />;
       case 'notes':
         return <NotesScreen onBack={() => navigate('home')} />;
+      case 'tasks':
+        return <TasksScreen onBack={() => navigate('home')} />;
+      case 'calendars':
+        return <CalendarsScreen onBack={() => navigate('home')} />;
+      case 'mail':
+        return <MailScreen onBack={() => navigate('home')} />;
+      case 'projects':
+        return <ProjectsScreen onBack={() => navigate('home')} />;
+      case 'account':
+        return <AccountScreen onBack={() => navigate('home')} />;
       default:
         return (
           <HomeScreen
