@@ -217,6 +217,34 @@ export const PRIORITIES = [
   { id: 'low', label: 'Low', color: '#10B981' },
 ];
 
+// Category Icons (12 SVG icon options for categories)
+export const CATEGORY_ICONS = [
+  { id: 'briefcase', name: 'Briefcase' },
+  { id: 'home', name: 'Home' },
+  { id: 'cart', name: 'Cart' },
+  { id: 'heart', name: 'Heart' },
+  { id: 'star', name: 'Star' },
+  { id: 'folder', name: 'Folder' },
+  { id: 'tag', name: 'Tag' },
+  { id: 'user', name: 'User' },
+  { id: 'users', name: 'Users' },
+  { id: 'globe', name: 'Globe' },
+  { id: 'book', name: 'Book' },
+  { id: 'lightbulb', name: 'Lightbulb' },
+];
+
+// Category Colors
+export const CATEGORY_COLORS = [
+  { id: 'indigo', color: '#6366F1', name: 'Indigo' },
+  { id: 'emerald', color: '#10B981', name: 'Emerald' },
+  { id: 'amber', color: '#F59E0B', name: 'Amber' },
+  { id: 'rose', color: '#F43F5E', name: 'Rose' },
+  { id: 'purple', color: '#8B5CF6', name: 'Purple' },
+  { id: 'cyan', color: '#06B6D4', name: 'Cyan' },
+  { id: 'orange', color: '#F97316', name: 'Orange' },
+  { id: 'pink', color: '#EC4899', name: 'Pink' },
+];
+
 // Helper functions for tag parsing
 export const parseTagsFromText = (text) => {
   const tagRegex = /#(\w+)/g;

@@ -72,6 +72,14 @@ const Icon = ({ name, color, size = 20 }) => {
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
       </svg>
     ),
+    categories: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+      </svg>
+    ),
   };
 
   return icons[name] || null;
@@ -97,6 +105,7 @@ const Header = ({ onNavigate, onOpenSearch }) => {
 
   const menuItems = [
     { icon: 'search', label: 'Search', action: 'search' },
+    { icon: 'categories', label: 'Categories', screen: 'categories' },
     { icon: 'settings', label: 'Settings', screen: 'settings' },
     { icon: 'notes', label: 'Notes', screen: 'notes' },
     { icon: 'mail', label: 'Mail', screen: 'mail' },
