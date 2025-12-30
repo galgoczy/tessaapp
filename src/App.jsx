@@ -10,6 +10,7 @@ import MailScreen from './components/mail/MailScreen';
 import ProjectsScreen from './components/projects/ProjectsScreen';
 import AccountScreen from './components/account/AccountScreen';
 import CategoryManager from './components/categories/CategoryManager';
+import ContactsScreen from './components/contacts/ContactsScreen';
 import VoiceOverlay from './components/voice/VoiceOverlay';
 import BriefingOverlay from './components/briefing/BriefingOverlay';
 
@@ -54,6 +55,8 @@ const AppContent = () => {
         return <AccountScreen onBack={() => navigate('home')} />;
       case 'categories':
         return <CategoryManager onBack={() => navigate('home')} />;
+      case 'contacts':
+        return <ContactsScreen onBack={() => navigate('home')} />;
       default:
         return (
           <HomeScreen

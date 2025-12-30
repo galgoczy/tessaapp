@@ -80,6 +80,14 @@ const Icon = ({ name, color, size = 20 }) => {
         <rect x="3" y="14" width="7" height="7" rx="1" />
       </svg>
     ),
+    contacts: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
   };
 
   return icons[name] || null;
@@ -108,6 +116,7 @@ const Header = ({ onNavigate, onOpenSearch }) => {
     { icon: 'search', label: 'Search', action: 'search' },
     { icon: 'settings', label: 'Settings', screen: 'settings' },
     { icon: 'categories', label: 'Categories', screen: 'categories' },
+    { icon: 'contacts', label: 'Contacts', screen: 'contacts' },
     { icon: 'notes', label: 'Notes', screen: 'notes' },
     { icon: 'mail', label: 'Mail', screen: 'mail' },
     { icon: 'calendar', label: 'Calendars', screen: 'calendars' },

@@ -164,7 +164,7 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
           } else if (result.type === 'event') {
             onNavigate('calendars');
           } else if (result.type === 'contact') {
-            onNavigate('account');
+            onNavigate('contacts');
           } else if (result.type === 'email') {
             onNavigate('mail');
           }
