@@ -73,8 +73,8 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
         {/* Your Stuff indicator */}
         <div style={{
           textAlign: 'center',
-          paddingTop: 20,
-          paddingBottom: 40,
+          paddingTop: 0,
+          paddingBottom: 30,
           opacity: quoteOpacity,
           transition: 'opacity 0.5s',
         }}>
