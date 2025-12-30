@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { DataProvider } from './context/DataContext';
 import HomeScreen from './components/home/HomeScreen';
 import SettingsScreen from './components/settings/SettingsScreen';
 import NotesScreen from './components/notes/NotesScreen';
@@ -148,7 +149,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <ThemeProvider>
-      <AppContent />
+      <DataProvider>
+        <AppContent />
+      </DataProvider>
     </ThemeProvider>
   );
 };
