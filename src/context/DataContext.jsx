@@ -17,6 +17,8 @@ const STORAGE_KEYS = {
   CONTACTS: 'tessa_contacts',
   EVENTS: 'tessa_events',
   SETTINGS: 'tessa_settings',
+  HABITS: 'tessa_habits',
+  FOCUS_SESSIONS: 'tessa_focus_sessions',
 };
 
 // Default settings
@@ -90,6 +92,18 @@ export const DataProvider = ({ children }) => {
     return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : DEFAULT_SETTINGS;
   });
 
+  // Habits
+  const [habits, setHabits] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.HABITS);
+    return stored ? JSON.parse(stored) : [];
+  });
+
+  // Focus Sessions
+  const [focusSessions, setFocusSessions] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.FOCUS_SESSIONS);
+    return stored ? JSON.parse(stored) : [];
+  });
+
   // === PERSISTENCE ===
 
   useEffect(() => {
@@ -123,6 +137,14 @@ export const DataProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.HABITS, JSON.stringify(habits));
+  }, [habits]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.FOCUS_SESSIONS, JSON.stringify(focusSessions));
+  }, [focusSessions]);
 
   // === SETTINGS ACTIONS ===
 
@@ -288,6 +310,10 @@ export const DataProvider = ({ children }) => {
       isCompleted: false,
       completedAt: null,
       assignedTo: null,
+      // Recurring task fields
+      isRecurring: false,
+      recurrence: null, // { type: 'daily'|'weekly'|'monthly'|'yearly', interval: 1, daysOfWeek: [], endDate: null }
+      parentTaskId: null, // For recurring instances
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ...task,
@@ -492,6 +518,148 @@ export const DataProvider = ({ children }) => {
     });
   }, [categories, addEvent]);
 
+  // === HABIT ACTIONS ===
+
+  const addHabit = useCallback((habit) => {
+    const newHabit = {
+      id: generateId(),
+      title: habit.title || 'New Habit',
+      description: habit.description || '',
+      icon: habit.icon || '✨',
+      color: habit.color || '#6366F1',
+      frequency: habit.frequency || 'daily', // daily, weekly, custom
+      targetDays: habit.targetDays || [0, 1, 2, 3, 4, 5, 6], // 0=Sunday, 6=Saturday
+      reminderTime: habit.reminderTime || null,
+      currentStreak: 0,
+      longestStreak: 0,
+      completions: [], // Array of date strings (YYYY-MM-DD)
+      isArchived: false,
+      createdAt: new Date().toISOString(),
+      ...habit,
+    };
+    setHabits(prev => [...prev, newHabit]);
+    return newHabit;
+  }, []);
+
+  const updateHabit = useCallback((id, updates) => {
+    setHabits(prev => prev.map(h =>
+      h.id === id ? { ...h, ...updates } : h
+    ));
+  }, []);
+
+  const deleteHabit = useCallback((id) => {
+    setHabits(prev => prev.filter(h => h.id !== id));
+  }, []);
+
+  const completeHabit = useCallback((habitId, date = new Date()) => {
+    const dateStr = date.toISOString().split('T')[0];
+    setHabits(prev => prev.map(h => {
+      if (h.id !== habitId) return h;
+
+      const completions = h.completions || [];
+      if (completions.includes(dateStr)) return h; // Already completed
+
+      const newCompletions = [...completions, dateStr].sort();
+
+      // Calculate streak
+      let currentStreak = 1;
+      const today = new Date();
+      for (let i = 1; i <= 365; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(checkDate.getDate() - i);
+        const checkStr = checkDate.toISOString().split('T')[0];
+        if (newCompletions.includes(checkStr)) {
+          currentStreak++;
+        } else {
+          break;
+        }
+      }
+
+      const longestStreak = Math.max(h.longestStreak || 0, currentStreak);
+
+      return {
+        ...h,
+        completions: newCompletions,
+        currentStreak,
+        longestStreak,
+      };
+    }));
+  }, []);
+
+  const uncompleteHabit = useCallback((habitId, date = new Date()) => {
+    const dateStr = date.toISOString().split('T')[0];
+    setHabits(prev => prev.map(h => {
+      if (h.id !== habitId) return h;
+
+      const completions = (h.completions || []).filter(d => d !== dateStr);
+
+      // Recalculate streak
+      let currentStreak = 0;
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      if (completions.includes(todayStr)) {
+        currentStreak = 1;
+        for (let i = 1; i <= 365; i++) {
+          const checkDate = new Date(today);
+          checkDate.setDate(checkDate.getDate() - i);
+          const checkStr = checkDate.toISOString().split('T')[0];
+          if (completions.includes(checkStr)) {
+            currentStreak++;
+          } else {
+            break;
+          }
+        }
+      }
+
+      return { ...h, completions, currentStreak };
+    }));
+  }, []);
+
+  const isHabitCompletedOnDate = useCallback((habitId, date = new Date()) => {
+    const habit = habits.find(h => h.id === habitId);
+    if (!habit) return false;
+    const dateStr = date.toISOString().split('T')[0];
+    return (habit.completions || []).includes(dateStr);
+  }, [habits]);
+
+  // === FOCUS SESSION ACTIONS ===
+
+  const startFocusSession = useCallback((session) => {
+    const newSession = {
+      id: generateId(),
+      type: session.type || 'focus', // focus, shortBreak, longBreak
+      duration: session.duration || 25, // minutes
+      taskId: session.taskId || null,
+      projectId: session.projectId || null,
+      startTime: new Date().toISOString(),
+      endTime: null,
+      isCompleted: false,
+      notes: '',
+      ...session,
+    };
+    setFocusSessions(prev => [...prev, newSession]);
+    return newSession;
+  }, []);
+
+  const completeFocusSession = useCallback((sessionId, notes = '') => {
+    setFocusSessions(prev => prev.map(s =>
+      s.id === sessionId
+        ? { ...s, endTime: new Date().toISOString(), isCompleted: true, notes }
+        : s
+    ));
+  }, []);
+
+  const cancelFocusSession = useCallback((sessionId) => {
+    setFocusSessions(prev => prev.filter(s => s.id !== sessionId));
+  }, []);
+
+  const getTodayFocusTime = useCallback(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return focusSessions
+      .filter(s => s.isCompleted && s.startTime.startsWith(today) && s.type === 'focus')
+      .reduce((total, s) => total + s.duration, 0);
+  }, [focusSessions]);
+
   // === CONTACT ACTIONS ===
 
   const addContact = useCallback((contact) => {
@@ -655,6 +823,8 @@ export const DataProvider = ({ children }) => {
     contacts,
     events,
     settings,
+    habits,
+    focusSessions,
 
     // Settings actions
     updateSettings,
@@ -692,6 +862,20 @@ export const DataProvider = ({ children }) => {
 
     // Event actions
     addEvent,
+
+    // Habit actions
+    addHabit,
+    updateHabit,
+    deleteHabit,
+    completeHabit,
+    uncompleteHabit,
+    isHabitCompletedOnDate,
+
+    // Focus session actions
+    startFocusSession,
+    completeFocusSession,
+    cancelFocusSession,
+    getTodayFocusTime,
 
     // Contact actions
     addContact,

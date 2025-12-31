@@ -12,6 +12,8 @@ import AccountScreen from './components/account/AccountScreen';
 import CategoryManager from './components/categories/CategoryManager';
 import ContactsScreen from './components/contacts/ContactsScreen';
 import TagsScreen from './components/tags/TagsScreen';
+import HabitsScreen from './components/habits/HabitsScreen';
+import FocusScreen from './components/focus/FocusScreen';
 import VoiceOverlay from './components/voice/VoiceOverlay';
 import BriefingOverlay from './components/briefing/BriefingOverlay';
 import OnboardingFlow from './components/onboarding/OnboardingFlow';
@@ -83,6 +85,10 @@ const AppContent = () => {
         return <ContactsScreen onBack={() => navigate('home')} />;
       case 'tags':
         return <TagsScreen onBack={() => navigate('home')} />;
+      case 'habits':
+        return <HabitsScreen onBack={() => navigate('home')} />;
+      case 'focus':
+        return <FocusScreen onBack={() => navigate('home')} />;
       default:
         return (
           <HomeScreen
