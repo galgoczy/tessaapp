@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import WaveAnimation from './WaveAnimation';
+import { sendMessage, generateGreeting } from '../../services/AIService';
 
 // Icons
 const Icons = {
@@ -38,147 +39,6 @@ const Icons = {
   ),
 };
 
-// Tessa AI response types and logic
-const TESSA_RESPONSES = {
-  greeting: [
-    "Hello! How can I help you today?",
-    "Hi there! What would you like me to help you with?",
-    "Hey! I'm ready to assist. What do you need?",
-  ],
-  tasks: {
-    summary: (stats) => `You have ${stats.active} active tasks. ${stats.today > 0 ? `${stats.today} are due today.` : ''} ${stats.urgent > 0 ? `${stats.urgent} are marked as urgent.` : 'No urgent ones!'} What would you like to do?`,
-    empty: "You don't have any tasks yet. Would you like me to help you create one?",
-    created: (title) => `Got it! I've added "${title}" to your tasks. Anything else?`,
-    completed: (title) => `Nice work! "${title}" is now complete.`,
-  },
-  calendar: {
-    summary: (count) => count > 0
-      ? `You have ${count} event${count > 1 ? 's' : ''} coming up today. Want me to read them out?`
-      : "Your calendar looks clear today. Would you like to schedule something?",
-  },
-  notes: {
-    summary: (count) => `You have ${count} note${count !== 1 ? 's' : ''} saved. What would you like to do?`,
-    created: "I've saved that note for you.",
-  },
-  emails: {
-    summary: (unread) => unread > 0
-      ? `You have ${unread} unread email${unread > 1 ? 's' : ''}. Should I summarize them?`
-      : "No new emails at the moment. Your inbox is all caught up!",
-  },
-  suggestions: {
-    morning: (userName) => `Good morning, ${userName}! Here's what I'd suggest starting with: check your urgent tasks first, then review your calendar for today.`,
-    afternoon: (userName) => `Good afternoon, ${userName}! Let me help you stay on track. Would you like a quick update on your remaining tasks?`,
-    evening: (userName) => `Good evening, ${userName}! Time to wrap up. I can help you review what you accomplished today or plan for tomorrow.`,
-  },
-  whatFirst: (userName, urgentTask, todayTask) => {
-    if (urgentTask) {
-      return `${userName}, I'd recommend starting with "${urgentTask.title}" - it's marked as high priority. Would you like me to help you break it down into smaller steps?`;
-    }
-    if (todayTask) {
-      return `${userName}, let's start with "${todayTask.title}" - it's due today. Want me to set a timer or add any notes?`;
-    }
-    return `${userName}, you're all caught up! No urgent or due-today tasks. Would you like to plan ahead or review your upcoming tasks?`;
-  },
-  unknown: [
-    "I'm not sure I understood that. Could you try rephrasing?",
-    "Hmm, I didn't quite catch that. Can you say it differently?",
-    "I'm still learning! Could you try asking in another way?",
-  ],
-};
-
-// Simulate AI processing
-const simulateTessaResponse = (input, data, settings) => {
-  const text = input.toLowerCase();
-  const userName = settings?.userName || 'there';
-  const hour = new Date().getHours();
-
-  // Calculate stats
-  const today = new Date().toDateString();
-  const taskStats = {
-    active: data.tasks.filter(t => !t.isCompleted).length,
-    today: data.tasks.filter(t => t.dueDate && !t.isCompleted && new Date(t.dueDate).toDateString() === today).length,
-    urgent: data.tasks.filter(t => !t.isCompleted && t.priority === 'high').length,
-    completed: data.tasks.filter(t => t.isCompleted).length,
-  };
-
-  const urgentTask = data.tasks.find(t => !t.isCompleted && t.priority === 'high');
-  const todayTask = data.tasks.find(t => t.dueDate && !t.isCompleted && new Date(t.dueDate).toDateString() === today);
-
-  // What should I do first
-  if (text.includes('what should') || text.includes('do first') || text.includes('start with') || text.includes('recommend')) {
-    return { type: 'suggestion', message: TESSA_RESPONSES.whatFirst(userName, urgentTask, todayTask) };
-  }
-
-  // Task-related queries
-  if (text.includes('task') || text.includes('todo') || text.includes('to do')) {
-    if (text.includes('add') || text.includes('create') || text.includes('new')) {
-      return {
-        type: 'action',
-        message: "Sure! What would you like to name the new task?",
-        action: 'create_task',
-      };
-    }
-    if (taskStats.active === 0) {
-      return { type: 'info', message: TESSA_RESPONSES.tasks.empty };
-    }
-    return { type: 'info', message: TESSA_RESPONSES.tasks.summary(taskStats) };
-  }
-
-  // Calendar queries
-  if (text.includes('calendar') || text.includes('schedule') || text.includes('event') || text.includes('meeting')) {
-    return { type: 'info', message: TESSA_RESPONSES.calendar.summary(data.events.length) };
-  }
-
-  // Email queries
-  if (text.includes('email') || text.includes('mail') || text.includes('inbox')) {
-    return { type: 'info', message: TESSA_RESPONSES.emails.summary(2) };
-  }
-
-  // Notes queries
-  if (text.includes('note') || text.includes('notes')) {
-    if (text.includes('add') || text.includes('create') || text.includes('new')) {
-      return {
-        type: 'action',
-        message: "What would you like me to write down?",
-        action: 'create_note',
-      };
-    }
-    return { type: 'info', message: TESSA_RESPONSES.notes.summary(data.notes.length) };
-  }
-
-  // Day summary / suggestion
-  if (text.includes('my day') || text.includes('today') || text.includes('summary')) {
-    if (hour < 12) {
-      return { type: 'suggestion', message: TESSA_RESPONSES.suggestions.morning(userName) };
-    } else if (hour < 18) {
-      return { type: 'suggestion', message: TESSA_RESPONSES.suggestions.afternoon(userName) };
-    }
-    return { type: 'suggestion', message: TESSA_RESPONSES.suggestions.evening(userName) };
-  }
-
-  // Greetings
-  if (text.includes('hello') || text.includes('hi') || text.includes('hey')) {
-    const greetings = TESSA_RESPONSES.greeting;
-    return { type: 'greeting', message: greetings[Math.floor(Math.random() * greetings.length)] };
-  }
-
-  // Thank you
-  if (text.includes('thank') || text.includes('thanks')) {
-    return { type: 'greeting', message: "You're welcome! Is there anything else I can help with?" };
-  }
-
-  // Help
-  if (text.includes('help') || text.includes('what can you do')) {
-    return {
-      type: 'info',
-      message: "I can help you with:\n• Managing your tasks and to-dos\n• Checking your calendar\n• Creating notes\n• Summarizing your emails\n• Planning your day\n\nJust ask me anything!"
-    };
-  }
-
-  // Unknown
-  const unknowns = TESSA_RESPONSES.unknown;
-  return { type: 'unknown', message: unknowns[Math.floor(Math.random() * unknowns.length)] };
-};
 
 /**
  * VoiceOverlay Component
@@ -194,7 +54,7 @@ const simulateTessaResponse = (input, data, settings) => {
  */
 const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: initialVoiceMode }) => {
   const { theme } = useTheme();
-  const { tasks, notes, events, settings, addTask, addNote } = useData();
+  const { tasks, notes, events, settings } = useData();
 
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -203,7 +63,6 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
   const [wavePhase, setWavePhase] = useState(0);
   const [textInput, setTextInput] = useState('');
   const [conversation, setConversation] = useState([]);
-  const [pendingAction, setPendingAction] = useState(null);
   const conversationEndRef = useRef(null);
   const initialMessageProcessed = useRef(false);
 
@@ -218,17 +77,8 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
   // Initial greeting on open
   useEffect(() => {
     if (isOpen && conversation.length === 0) {
-      const hour = new Date().getHours();
-      const userName = settings?.userName || 'there';
-      let greeting;
-
-      if (hour < 12) {
-        greeting = `Good morning, ${userName}! How can I help you today?`;
-      } else if (hour < 18) {
-        greeting = `Good afternoon, ${userName}! What would you like to do?`;
-      } else {
-        greeting = `Good evening, ${userName}! How can I assist you?`;
-      }
+      const userName = settings?.userName || '';
+      const greeting = generateGreeting(userName);
 
       setConversation([{ role: 'tessa', message: greeting, type: 'greeting' }]);
 
@@ -268,7 +118,6 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
       setIsSpeaking(false);
       setTextInput('');
       setConversation([]);
-      setPendingAction(null);
       initialMessageProcessed.current = false;
     }
   }, [isOpen]);
@@ -281,55 +130,53 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
     }
   }, [isPro, voiceMode]);
 
-  const processInput = useCallback((input) => {
+  const processInput = useCallback(async (input) => {
     if (!input.trim()) return;
 
-    setConversation(prev => [...prev, { role: 'user', message: input }]);
+    // Add user message to conversation
+    const userMessage = { role: 'user', message: input };
+    setConversation(prev => [...prev, userMessage]);
     setIsProcessing(true);
 
-    if (pendingAction) {
-      setTimeout(() => {
-        if (pendingAction === 'create_task') {
-          addTask({ title: input, priority: 'medium' });
-          const response = TESSA_RESPONSES.tasks.created(input);
-          setConversation(prev => [...prev, {
-            role: 'tessa',
-            message: response,
-            type: 'success'
-          }]);
-          if (voiceMode) simulateSpeaking(1500);
-        } else if (pendingAction === 'create_note') {
-          addNote({ content: input });
-          setConversation(prev => [...prev, {
-            role: 'tessa',
-            message: TESSA_RESPONSES.notes.created,
-            type: 'success'
-          }]);
-          if (voiceMode) simulateSpeaking(1000);
-        }
-        setPendingAction(null);
-        setIsProcessing(false);
-      }, 800);
-      return;
-    }
+    try {
+      // Build context for AI
+      const context = {
+        userName: settings?.userName || '',
+        tasks: data.tasks || [],
+        notes: data.notes || [],
+        events: data.events || [],
+        settings,
+      };
 
-    setTimeout(() => {
-      const response = simulateTessaResponse(input, data, settings);
-      setConversation(prev => [...prev, { role: 'tessa', ...response }]);
+      // Get conversation history (exclude the current message we just added)
+      const history = conversation.filter(msg => msg.role === 'user' || msg.role === 'tessa');
 
-      if (response.action) {
-        setPendingAction(response.action);
-      }
+      // Call AI service
+      const response = await sendMessage(input, history, context);
 
-      setIsProcessing(false);
+      // Add AI response to conversation
+      setConversation(prev => [...prev, {
+        role: 'tessa',
+        message: response.message,
+        type: response.type,
+      }]);
 
       // Simulate voice response for Pro users
-      if (voiceMode) {
-        const speakDuration = Math.min(response.message.length * 40, 4000);
+      if (voiceMode && response.success) {
+        const speakDuration = Math.min(response.message.length * 35, 5000);
         simulateSpeaking(speakDuration);
       }
-    }, 800 + Math.random() * 400);
-  }, [data, settings, pendingAction, addTask, addNote, voiceMode, simulateSpeaking]);
+    } catch (error) {
+      console.error('Error processing input:', error);
+      setConversation(prev => [...prev, {
+        role: 'tessa',
+        message: 'Sajnálom, hiba történt. Kérlek, próbáld újra!',
+        type: 'error',
+      }]);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [data, settings, conversation, voiceMode, simulateSpeaking]);
 
   const handleSubmit = (e) => {
     e?.preventDefault();
@@ -347,10 +194,10 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
     if (isListening) {
       setIsListening(false);
       const demoQueries = [
-        "What are my tasks for today?",
-        "Show me my calendar",
-        "Help me plan my day",
-        "What should I do first?",
+        "Mik a mai feladataim?",
+        "Mutasd a naptáramat",
+        "Segíts megtervezni a napomat",
+        "Mivel kellene kezdenem?",
       ];
       const randomQuery = demoQueries[Math.floor(Math.random() * demoQueries.length)];
       processInput(randomQuery);
@@ -369,9 +216,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
 
   if (!isOpen) return null;
 
-  const suggestions = pendingAction
-    ? []
-    : ['My day', 'Tasks', 'What should I do first?', 'New note'];
+  const suggestions = ['Mai napom', 'Feladataim', 'Mivel kezdjek?', 'Segíts tervezni'];
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -685,7 +530,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
             type="text"
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
-            placeholder={pendingAction ? "Type your response..." : "Ask Tessa anything..."}
+            placeholder="Kérdezz Tessától bármit..."
             style={{
               width: '100%',
               padding: '12px 16px',
