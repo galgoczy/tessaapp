@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 
 // SVG Icons component
@@ -88,6 +89,12 @@ const Icon = ({ name, color, size = 20 }) => {
         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
       </svg>
     ),
+    tags: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+        <line x1="7" y1="7" x2="7.01" y2="7" />
+      </svg>
+    ),
   };
 
   return icons[name] || null;
@@ -101,7 +108,9 @@ const Icon = ({ name, color, size = 20 }) => {
  */
 const Header = ({ onNavigate, onOpenSearch }) => {
   const { theme, isDark, toggleMode, toggleAccentStyle, isFilledStyle } = useTheme();
+  const { settings } = useData();
   const [showMenu, setShowMenu] = useState(false);
+  const userName = settings?.userName || 'there';
 
   // Get time-based greeting
   const getGreeting = () => {
@@ -116,6 +125,7 @@ const Header = ({ onNavigate, onOpenSearch }) => {
     { icon: 'search', label: 'Search', action: 'search' },
     { icon: 'settings', label: 'Settings', screen: 'settings' },
     { icon: 'categories', label: 'Categories', screen: 'categories' },
+    { icon: 'tags', label: 'Tags', screen: 'tags' },
     { icon: 'contacts', label: 'Contacts', screen: 'contacts' },
     { icon: 'notes', label: 'Notes', screen: 'notes' },
     { icon: 'mail', label: 'Mail', screen: 'mail' },
@@ -150,7 +160,7 @@ const Header = ({ onNavigate, onOpenSearch }) => {
           {getGreeting()},
         </p>
         <h1 style={{ color: theme.text, fontSize: 28, fontWeight: 700, margin: 0 }}>
-          Geri
+          {userName}
         </h1>
       </div>
 

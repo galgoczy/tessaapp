@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS = {
   dailySummaryEnabled: true,
   dailySummaryTime: '08:00',
   isPro: false,
+  hasCompletedOnboarding: false,
 };
 
 // Create context
@@ -199,6 +200,9 @@ export const DataProvider = ({ children }) => {
       tags: [],
       status: 'active',
       collaborators: [],
+      milestones: [],
+      startDate: null,
+      dueDate: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ...project,
@@ -218,6 +222,48 @@ export const DataProvider = ({ children }) => {
     setTasks(prev => prev.map(t => t.projectId === id ? { ...t, projectId: null } : t));
     setNotes(prev => prev.map(n => n.projectId === id ? { ...n, projectId: null } : n));
     setProjects(prev => prev.filter(p => p.id !== id));
+  }, []);
+
+  const addMilestone = useCallback((projectId, milestone) => {
+    const newMilestone = {
+      id: generateId(),
+      title: milestone.title || 'New Milestone',
+      dueDate: milestone.dueDate || null,
+      isCompleted: false,
+      completedAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    setProjects(prev => prev.map(p =>
+      p.id === projectId
+        ? { ...p, milestones: [...(p.milestones || []), newMilestone], updatedAt: new Date().toISOString() }
+        : p
+    ));
+    return newMilestone;
+  }, []);
+
+  const updateMilestone = useCallback((projectId, milestoneId, updates) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id !== projectId) return p;
+      const milestones = (p.milestones || []).map(m => {
+        if (m.id !== milestoneId) return m;
+        const updated = { ...m, ...updates };
+        if (updates.isCompleted && !m.isCompleted) {
+          updated.completedAt = new Date().toISOString();
+        } else if (updates.isCompleted === false) {
+          updated.completedAt = null;
+        }
+        return updated;
+      });
+      return { ...p, milestones, updatedAt: new Date().toISOString() };
+    }));
+  }, []);
+
+  const deleteMilestone = useCallback((projectId, milestoneId) => {
+    setProjects(prev => prev.map(p =>
+      p.id === projectId
+        ? { ...p, milestones: (p.milestones || []).filter(m => m.id !== milestoneId), updatedAt: new Date().toISOString() }
+        : p
+    ));
   }, []);
 
   // === TASK ACTIONS ===
@@ -380,6 +426,29 @@ export const DataProvider = ({ children }) => {
     if (existing) return existing;
     return addTag(name);
   }, [tags, addTag]);
+
+  const updateTag = useCallback((id, updates) => {
+    setTags(prev => prev.map(tag =>
+      tag.id === id ? { ...tag, ...updates } : tag
+    ));
+  }, []);
+
+  const deleteTag = useCallback((id) => {
+    // Remove tag from all items
+    setTasks(prev => prev.map(t => ({
+      ...t,
+      tags: t.tags.filter(tagId => tagId !== id)
+    })));
+    setNotes(prev => prev.map(n => ({
+      ...n,
+      tags: n.tags.filter(tagId => tagId !== id)
+    })));
+    setProjects(prev => prev.map(p => ({
+      ...p,
+      tags: p.tags.filter(tagId => tagId !== id)
+    })));
+    setTags(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   // === EVENT ACTIONS ===
 
@@ -600,6 +669,9 @@ export const DataProvider = ({ children }) => {
     addProject,
     updateProject,
     deleteProject,
+    addMilestone,
+    updateMilestone,
+    deleteMilestone,
 
     // Task actions
     addTask,
@@ -615,6 +687,8 @@ export const DataProvider = ({ children }) => {
     // Tag actions
     addTag,
     getOrCreateTag,
+    updateTag,
+    deleteTag,
 
     // Event actions
     addEvent,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { DataProvider } from './context/DataContext';
+import { DataProvider, useData } from './context/DataContext';
 import HomeScreen from './components/home/HomeScreen';
 import SettingsScreen from './components/settings/SettingsScreen';
 import NotesScreen from './components/notes/NotesScreen';
@@ -11,8 +11,10 @@ import ProjectsScreen from './components/projects/ProjectsScreen';
 import AccountScreen from './components/account/AccountScreen';
 import CategoryManager from './components/categories/CategoryManager';
 import ContactsScreen from './components/contacts/ContactsScreen';
+import TagsScreen from './components/tags/TagsScreen';
 import VoiceOverlay from './components/voice/VoiceOverlay';
 import BriefingOverlay from './components/briefing/BriefingOverlay';
+import OnboardingFlow from './components/onboarding/OnboardingFlow';
 
 /**
  * Main App Component
@@ -23,9 +25,13 @@ import BriefingOverlay from './components/briefing/BriefingOverlay';
 
 const AppContent = () => {
   const { theme } = useTheme();
+  const { settings, updateSettings } = useData();
 
   // Navigation state
   const [currentScreen, setCurrentScreen] = useState('home');
+
+  // Onboarding state
+  const [showOnboarding, setShowOnboarding] = useState(!settings?.hasCompletedOnboarding);
 
   // Overlay states
   const [voiceOpen, setVoiceOpen] = useState(false);
@@ -75,6 +81,8 @@ const AppContent = () => {
         return <CategoryManager onBack={() => navigate('home')} />;
       case 'contacts':
         return <ContactsScreen onBack={() => navigate('home')} />;
+      case 'tags':
+        return <TagsScreen onBack={() => navigate('home')} />;
       default:
         return (
           <HomeScreen
@@ -169,6 +177,13 @@ const AppContent = () => {
           padding: 0;
         }
       `}</style>
+
+      {/* Onboarding Flow */}
+      {showOnboarding && (
+        <OnboardingFlow
+          onComplete={() => setShowOnboarding(false)}
+        />
+      )}
     </div>
   );
 };
