@@ -111,6 +111,11 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
       },
       onSpeechEnd: () => {
         setIsListening(false);
+        setInterimTranscript('');
+      },
+      onSilenceTimeout: () => {
+        // Auto-stopped due to silence
+        console.log('Speech stopped due to silence');
       },
       onSpeakStart: () => {
         setIsSpeaking(true);
@@ -252,34 +257,36 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
     processInput(suggestion);
   };
 
-  // Start/stop voice recognition
-  const startListening = useCallback(() => {
+  // Toggle voice recognition (tap to start, tap again to stop)
+  const toggleListening = useCallback(() => {
     if (speechCapabilities.speechToText) {
-      speechService.startListening();
+      if (isListening) {
+        // Stop listening
+        speechService.stopListening();
+      } else {
+        // Start listening
+        speechService.startListening();
+      }
     } else {
-      // Fallback: show demo mode
-      setIsListening(true);
+      // Fallback demo mode
+      if (isListening) {
+        setIsListening(false);
+        // Simulate voice input with demo query
+        const demoQueriesByLang = {
+          en: ["What are my tasks for today?", "Show me my calendar", "Help me plan my day", "What should I start with?"],
+          hu: ["Mik a mai feladataim?", "Mutasd a naptáramat", "Segíts megtervezni a napomat", "Mivel kellene kezdenem?"],
+          de: ["Was sind meine Aufgaben für heute?", "Zeig mir meinen Kalender", "Hilf mir meinen Tag zu planen", "Womit soll ich anfangen?"],
+          es: ["¿Cuáles son mis tareas para hoy?", "Muéstrame mi calendario", "Ayúdame a planificar mi día", "¿Por dónde debería empezar?"],
+          fr: ["Quelles sont mes tâches pour aujourd'hui ?", "Montre-moi mon calendrier", "Aide-moi à planifier ma journée", "Par quoi devrais-je commencer ?"],
+        };
+        const demoQueries = demoQueriesByLang[language] || demoQueriesByLang.en;
+        const randomQuery = demoQueries[Math.floor(Math.random() * demoQueries.length)];
+        processInput(randomQuery);
+      } else {
+        setIsListening(true);
+      }
     }
-  }, [speechCapabilities.speechToText]);
-
-  const stopListening = useCallback(() => {
-    if (speechCapabilities.speechToText) {
-      speechService.stopListening();
-    } else {
-      // Fallback demo mode - simulate voice input
-      setIsListening(false);
-      const demoQueriesByLang = {
-        en: ["What are my tasks for today?", "Show me my calendar", "Help me plan my day", "What should I start with?"],
-        hu: ["Mik a mai feladataim?", "Mutasd a naptáramat", "Segíts megtervezni a napomat", "Mivel kellene kezdenem?"],
-        de: ["Was sind meine Aufgaben für heute?", "Zeig mir meinen Kalender", "Hilf mir meinen Tag zu planen", "Womit soll ich anfangen?"],
-        es: ["¿Cuáles son mis tareas para hoy?", "Muéstrame mi calendario", "Ayúdame a planificar mi día", "¿Por dónde debería empezar?"],
-        fr: ["Quelles sont mes tâches pour aujourd'hui ?", "Montre-moi mon calendrier", "Aide-moi à planifier ma journée", "Par quoi devrais-je commencer ?"],
-      };
-      const demoQueries = demoQueriesByLang[language] || demoQueriesByLang.en;
-      const randomQuery = demoQueries[Math.floor(Math.random() * demoQueries.length)];
-      processInput(randomQuery);
-    }
-  }, [speechCapabilities.speechToText, language, processInput]);
+  }, [speechCapabilities.speechToText, isListening, language, processInput]);
 
   const handleFileUpload = () => {
     // Placeholder for file upload
@@ -674,14 +681,10 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
           </button>
         )}
 
-        {/* Mic button */}
+        {/* Mic button - Toggle mode */}
         {!textInput.trim() && (
           <button
-            onMouseDown={startListening}
-            onMouseUp={stopListening}
-            onMouseLeave={stopListening}
-            onTouchStart={startListening}
-            onTouchEnd={stopListening}
+            onClick={toggleListening}
             style={{
               width: 48,
               height: 48,

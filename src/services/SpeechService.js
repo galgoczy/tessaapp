@@ -41,7 +41,12 @@ class SpeechRecognitionService {
     this.onError = null;
     this.onStart = null;
     this.onEnd = null;
+    this.onSilenceTimeout = null;
     this.language = 'en';
+    this.silenceTimer = null;
+    this.silenceTimeout = 3000; // 3 seconds of silence
+    this.lastSpeechTime = null;
+    this.hasReceivedSpeech = false;
   }
 
   /**
@@ -62,26 +67,39 @@ class SpeechRecognitionService {
     }
 
     this.recognition = new SpeechRecognition();
-    this.recognition.continuous = options.continuous || false;
-    this.recognition.interimResults = options.interimResults || true;
+    this.recognition.continuous = true; // Keep listening until stopped
+    this.recognition.interimResults = true;
     this.language = options.language || 'en';
     this.recognition.lang = LANGUAGE_CODES[this.language] || 'en-US';
+    this.silenceTimeout = options.silenceTimeout || 3000;
 
     this.recognition.onresult = (event) => {
+      // Reset silence timer on any result
+      this.resetSilenceTimer();
+      this.hasReceivedSpeech = true;
+      this.lastSpeechTime = Date.now();
+
       const results = Array.from(event.results);
-      const transcript = results
-        .map(result => result[0].transcript)
-        .join('');
-      const isFinal = results.some(result => result.isFinal);
+      // Get only the latest result
+      const latestResult = results[results.length - 1];
+      const transcript = latestResult[0].transcript;
+      const isFinal = latestResult.isFinal;
 
       if (this.onResult) {
         this.onResult({ transcript, isFinal });
+      }
+
+      // If we got a final result, start silence timer for auto-stop
+      if (isFinal) {
+        this.startSilenceTimer();
       }
     };
 
     this.recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
+      this.clearSilenceTimer();
       this.isListening = false;
+      this.hasReceivedSpeech = false;
       if (this.onError) {
         this.onError(event.error);
       }
@@ -89,19 +107,64 @@ class SpeechRecognitionService {
 
     this.recognition.onstart = () => {
       this.isListening = true;
+      this.hasReceivedSpeech = false;
+      this.lastSpeechTime = null;
+      // Start initial silence timer (stop if no speech detected)
+      this.startSilenceTimer();
       if (this.onStart) {
         this.onStart();
       }
     };
 
     this.recognition.onend = () => {
+      this.clearSilenceTimer();
       this.isListening = false;
+      this.hasReceivedSpeech = false;
       if (this.onEnd) {
         this.onEnd();
       }
     };
 
+    // Handle speech end event for continuous mode
+    this.recognition.onspeechend = () => {
+      // Speech ended, start silence timer
+      this.startSilenceTimer();
+    };
+
     return true;
+  }
+
+  /**
+   * Start silence timer
+   */
+  startSilenceTimer() {
+    this.clearSilenceTimer();
+    this.silenceTimer = setTimeout(() => {
+      if (this.isListening) {
+        // Auto-stop after silence
+        if (this.onSilenceTimeout) {
+          this.onSilenceTimeout();
+        }
+        this.stop();
+      }
+    }, this.silenceTimeout);
+  }
+
+  /**
+   * Reset silence timer (called when speech is detected)
+   */
+  resetSilenceTimer() {
+    this.clearSilenceTimer();
+  }
+
+  /**
+   * Clear silence timer
+   */
+  clearSilenceTimer() {
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
   }
 
   /**
@@ -110,6 +173,11 @@ class SpeechRecognitionService {
   start() {
     if (!this.recognition) {
       if (!this.init()) return false;
+    }
+
+    // If already listening, don't restart
+    if (this.isListening) {
+      return true;
     }
 
     try {
@@ -126,6 +194,7 @@ class SpeechRecognitionService {
    * Stop listening
    */
   stop() {
+    this.clearSilenceTimer();
     if (this.recognition && this.isListening) {
       this.recognition.stop();
     }
@@ -248,6 +317,11 @@ class SpeechSynthesisService {
     // Cancel any ongoing speech
     this.stop();
 
+    // Safari workaround: voices may not be loaded yet
+    if (this.voices.length === 0) {
+      this.loadVoices();
+    }
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.voice = options.voice || this.selectedVoice;
     utterance.lang = LANGUAGE_CODES[options.language || this.language] || 'en-US';
@@ -268,7 +342,26 @@ class SpeechSynthesisService {
       if (this.onError) this.onError(event.error);
     };
 
+    // Safari workaround: speechSynthesis can get stuck, use resume trick
+    if (this.synth.paused) {
+      this.synth.resume();
+    }
+
     this.synth.speak(utterance);
+
+    // Safari workaround: keep synthesis active with periodic resume
+    // Safari pauses synthesis when it's not in focus
+    const safariResumeInterval = setInterval(() => {
+      if (!this.synth.speaking) {
+        clearInterval(safariResumeInterval);
+      } else if (this.synth.paused) {
+        this.synth.resume();
+      }
+    }, 100);
+
+    // Clear interval after max 30 seconds
+    setTimeout(() => clearInterval(safariResumeInterval), 30000);
+
     return true;
   }
 
@@ -410,6 +503,7 @@ class SpeechService {
     onSpeechError,
     onSpeechStart,
     onSpeechEnd,
+    onSilenceTimeout,
     onSpeakStart,
     onSpeakEnd,
     onSpeakError,
@@ -418,9 +512,17 @@ class SpeechService {
     this.recognition.onError = onSpeechError;
     this.recognition.onStart = onSpeechStart;
     this.recognition.onEnd = onSpeechEnd;
+    this.recognition.onSilenceTimeout = onSilenceTimeout;
     this.synthesis.onStart = onSpeakStart;
     this.synthesis.onEnd = onSpeakEnd;
     this.synthesis.onError = onSpeakError;
+  }
+
+  /**
+   * Check if currently listening
+   */
+  isCurrentlyListening() {
+    return this.recognition.isListening;
   }
 }
 
