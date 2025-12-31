@@ -247,10 +247,13 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
 
   // Tessa speaks response (real TTS when available)
   const speakResponse = useCallback((text) => {
-    if (voiceMode && speechCapabilities.textToSpeech) {
+    if (speechCapabilities.textToSpeech) {
+      console.log('TTS: Speaking response:', text.substring(0, 50) + '...');
       speechService.speak(text, { language });
+    } else {
+      console.log('TTS: Not available');
     }
-  }, [voiceMode, speechCapabilities.textToSpeech, language]);
+  }, [speechCapabilities.textToSpeech, language]);
 
   const processInput = useCallback(async (input) => {
     if (!input.trim()) return;
@@ -283,8 +286,8 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         type: response.type,
       }]);
 
-      // Speak response if voice mode is enabled
-      if (voiceMode && response.success) {
+      // Always speak response if TTS available
+      if (response.success) {
         speakResponse(response.message);
       }
     } catch (error) {
@@ -297,7 +300,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
     } finally {
       setIsProcessing(false);
     }
-  }, [data, settings, conversation, voiceMode, speakResponse]);
+  }, [data, settings, conversation, speakResponse]);
 
   const handleSubmit = (e) => {
     e?.preventDefault();

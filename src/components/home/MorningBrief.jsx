@@ -93,7 +93,7 @@ const MorningBrief = ({ onClick }) => {
       onClick={onClick}
       style={{
         padding: 18,
-        marginBottom: 40,
+        marginBottom: 20,
         display: 'flex',
         alignItems: 'center',
         gap: 14,
