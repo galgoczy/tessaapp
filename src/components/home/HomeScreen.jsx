@@ -77,8 +77,8 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
         {/* Your Stuff indicator - slightly higher */}
         <div style={{
           textAlign: 'center',
-          marginTop: -28,
-          paddingBottom: 100,
+          marginTop: -36,
+          paddingBottom: 90,
           opacity: quoteOpacity,
           transition: 'opacity 0.5s',
         }}>
