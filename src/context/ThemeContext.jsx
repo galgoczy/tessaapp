@@ -3,10 +3,11 @@ import { buildTheme, accentPalettes } from '../styles/themes';
 
 /**
  * Theme Context
- * 
+ *
  * Provides app-wide theming with:
  * - Dark/Light mode toggle
  * - Accent color palette selection
+ * - Accent style (filled vs outline)
  * - Persistent storage of preferences
  */
 
@@ -16,6 +17,7 @@ const ThemeContext = createContext(null);
 const STORAGE_KEYS = {
   MODE: 'tessa_theme_mode',
   ACCENT: 'tessa_accent_palette',
+  ACCENT_STYLE: 'tessa_accent_style',
 };
 
 export const ThemeProvider = ({ children }) => {
@@ -29,9 +31,18 @@ export const ThemeProvider = ({ children }) => {
 
   const [accentId, setAccentId] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEYS.ACCENT) || 'sunset';
+      return localStorage.getItem(STORAGE_KEYS.ACCENT) || 'forest';
     }
-    return 'sunset';
+    return 'forest';
+  });
+
+  // Accent style: 'filled' (accent bg, white text) or 'outline' (white bg, accent border)
+  // Default is now 'outline'
+  const [accentStyle, setAccentStyle] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(STORAGE_KEYS.ACCENT_STYLE) || 'outline';
+    }
+    return 'outline';
   });
 
   // Build theme object
@@ -46,6 +57,10 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEYS.ACCENT, accentId);
   }, [accentId]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ACCENT_STYLE, accentStyle);
+  }, [accentStyle]);
+
   // Toggle dark/light mode
   const toggleMode = () => {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');
@@ -58,11 +73,22 @@ export const ThemeProvider = ({ children }) => {
     }
   };
 
-  // Set accent palette
+  // Set accent palette - if same palette, toggle style
   const setAccent = (paletteId) => {
     if (accentPalettes[paletteId]) {
-      setAccentId(paletteId);
+      if (accentId === paletteId) {
+        // Same color tapped again - toggle style
+        setAccentStyle(prev => prev === 'filled' ? 'outline' : 'filled');
+      } else {
+        // New color selected
+        setAccentId(paletteId);
+      }
     }
+  };
+
+  // Toggle accent style directly
+  const toggleAccentStyle = () => {
+    setAccentStyle(prev => prev === 'filled' ? 'outline' : 'filled');
   };
 
   // Get all available palettes for picker
@@ -74,10 +100,13 @@ export const ThemeProvider = ({ children }) => {
     theme,
     mode,
     accentId,
+    accentStyle,
+    isFilledStyle: accentStyle === 'filled',
     isDark: mode === 'dark',
     toggleMode,
     setThemeMode,
     setAccent,
+    toggleAccentStyle,
     getAvailablePalettes,
     palettes: accentPalettes,
   };
