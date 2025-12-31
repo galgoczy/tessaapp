@@ -2,11 +2,11 @@
  * AIService - Gemini API Integration for Tessa
  *
  * Handles communication with Google's Gemini API for intelligent responses.
+ * API calls go through /api/chat for security (API key stays server-side).
  */
 
-// Use environment variable for API key (set in Vercel dashboard)
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
+// API endpoint (Vercel serverless function)
+const CHAT_API_URL = '/api/chat';
 
 // Supported languages
 export const SUPPORTED_LANGUAGES = {
@@ -190,80 +190,44 @@ If the user wants to CREATE something (task, note, event), let them know they ca
 };
 
 /**
- * Send a message to Gemini API and get a response
+ * Send a message to the secure chat API
  */
 export const sendMessage = async (userMessage, conversationHistory, context) => {
   const language = context.settings?.language || getSystemLanguage();
   const strings = STRINGS[language] || STRINGS.en;
 
   try {
-    const systemPrompt = buildSystemPrompt(context, language);
+    console.log('Sending request to chat API...');
 
-    // Build conversation contents for Gemini
-    const contents = [];
-
-    // Add conversation history
-    conversationHistory.forEach(msg => {
-      contents.push({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.message }]
-      });
-    });
-
-    // Add the new user message
-    contents.push({
-      role: 'user',
-      parts: [{ text: userMessage }]
-    });
-
-    const requestBody = {
-      contents,
-      systemInstruction: {
-        parts: [{ text: systemPrompt }]
-      },
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 500,
-      },
-      safetySettings: [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-      ],
-    };
-
-    console.log('Sending request to Gemini API...');
-
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(CHAT_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        message: userMessage,
+        history: conversationHistory,
+        context: {
+          userName: context.userName,
+          tasks: context.tasks,
+          notes: context.notes,
+          events: context.events,
+        },
+        language,
+      }),
     });
 
     const data = await response.json();
 
-    if (!response.ok) {
-      console.error('Gemini API error:', data);
-      throw new Error(data.error?.message || `API error: ${response.status}`);
-    }
-
-    // Extract the response text
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!responseText) {
-      console.error('No response text in:', data);
-      throw new Error('No response from API');
+    if (!response.ok || !data.success) {
+      console.error('Chat API error:', data);
+      throw new Error(data.error || `API error: ${response.status}`);
     }
 
     return {
       success: true,
-      message: responseText,
-      type: 'ai_response',
+      message: data.message,
+      type: data.type || 'ai_response',
     };
   } catch (error) {
     console.error('AIService error:', error);
