@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
-import WaveAnimation from './WaveAnimation';
 import { sendMessage, generateGreeting, getSystemLanguage } from '../../services/AIService';
 import speechService from '../../services/SpeechService';
 
@@ -127,7 +126,6 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceMode, setVoiceMode] = useState(initialVoiceMode || false);
-  const [wavePhase, setWavePhase] = useState(0);
   const [textInput, setTextInput] = useState('');
   const [conversation, setConversation] = useState([]);
   const [interimTranscript, setInterimTranscript] = useState('');
@@ -231,16 +229,6 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
       }, 500);
     }
   }, [isOpen, initialMessage, conversation.length]);
-
-  // Animate wave when overlay is open
-  useEffect(() => {
-    if (isOpen) {
-      const interval = setInterval(() => {
-        setWavePhase(p => p + 0.12);
-      }, 50);
-      return () => clearInterval(interval);
-    }
-  }, [isOpen]);
 
   // Reset on close
   useEffect(() => {
@@ -728,35 +716,26 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         </div>
       )}
 
-      {/* Wave animation when listening */}
-      {isListening && (
+      {/* Interim transcript display */}
+      {isListening && interimTranscript && (
         <div style={{
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          justifyContent: 'center',
           marginBottom: 16,
-          gap: 12,
         }}>
-          <WaveAnimation
-            phase={wavePhase}
-            isActive={true}
-            colors={[theme.accent, theme.accentLight, theme.secondary]}
-          />
-          {interimTranscript && (
-            <p style={{
-              color: theme.textSecondary,
-              fontSize: 14,
-              fontStyle: 'italic',
-              textAlign: 'center',
-              margin: 0,
-              padding: '8px 16px',
-              background: theme.surfaceGlass,
-              borderRadius: 12,
-              maxWidth: '90%',
-            }}>
-              "{interimTranscript}"
-            </p>
-          )}
+          <p style={{
+            color: theme.textSecondary,
+            fontSize: 14,
+            fontStyle: 'italic',
+            textAlign: 'center',
+            margin: 0,
+            padding: '8px 16px',
+            background: theme.surfaceGlass,
+            borderRadius: 12,
+            maxWidth: '90%',
+          }}>
+            "{interimTranscript}"
+          </p>
         </div>
       )}
 

@@ -68,15 +68,14 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
       }}>
         <Header onNavigate={onNavigate} onOpenSearch={() => setShowSearch(true)} />
 
-        <QuoteSection opacity={quoteOpacity} />
-
+        {/* Morning Brief - positioned higher, right after header */}
         <MorningBrief onClick={onOpenBriefing} />
 
-        {/* Your Stuff indicator - positioned to be visible above floating button */}
+        {/* Your Stuff indicator */}
         <div style={{
           textAlign: 'center',
-          marginTop: -20,
-          paddingBottom: 120,
+          marginTop: 8,
+          marginBottom: 32,
           opacity: quoteOpacity,
           transition: 'opacity 0.5s',
         }}>
@@ -92,6 +91,9 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
             <span style={{ color: theme.textMuted, fontSize: 18, animation: 'bounce 1.5s infinite 0.15s', opacity: 0.5 }}>⌄</span>
           </div>
         </div>
+
+        {/* Quote section - now below, fills remaining space */}
+        <QuoteSection opacity={quoteOpacity} />
       </div>
 
       {/* Below fold content */}
