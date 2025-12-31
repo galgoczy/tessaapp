@@ -310,9 +310,15 @@ class SpeechSynthesisService {
    * Speak text
    */
   speak(text, options = {}) {
+    // Safari fix: always get fresh reference to speechSynthesis
+    this.synth = window.speechSynthesis;
+
     if (!this.synth) {
-      if (!this.init()) return false;
+      console.error('TTS: speechSynthesis not available');
+      return false;
     }
+
+    console.log('TTS: Starting speech synthesis...');
 
     // Cancel any ongoing speech
     this.stop();
@@ -320,6 +326,7 @@ class SpeechSynthesisService {
     // Safari workaround: voices may not be loaded yet
     if (this.voices.length === 0) {
       this.loadVoices();
+      console.log('TTS: Loaded voices:', this.voices.length);
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -329,16 +336,20 @@ class SpeechSynthesisService {
     utterance.pitch = options.pitch || this.pitch;
     utterance.volume = options.volume || 1.0;
 
+    console.log('TTS: Using voice:', utterance.voice?.name || 'default', 'lang:', utterance.lang);
+
     utterance.onstart = () => {
+      console.log('TTS: Speech started');
       if (this.onStart) this.onStart();
     };
 
     utterance.onend = () => {
+      console.log('TTS: Speech ended');
       if (this.onEnd) this.onEnd();
     };
 
     utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event.error);
+      console.error('TTS: Speech synthesis error:', event.error);
       if (this.onError) this.onError(event.error);
     };
 

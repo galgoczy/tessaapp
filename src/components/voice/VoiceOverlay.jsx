@@ -247,13 +247,15 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
 
   // Tessa speaks response (real TTS when available)
   const speakResponse = useCallback((text) => {
-    if (speechCapabilities.textToSpeech) {
+    // Check TTS availability directly (Safari may initialize late)
+    const synth = window.speechSynthesis;
+    if (synth) {
       console.log('TTS: Speaking response:', text.substring(0, 50) + '...');
       speechService.speak(text, { language });
     } else {
-      console.log('TTS: Not available');
+      console.log('TTS: window.speechSynthesis not available');
     }
-  }, [speechCapabilities.textToSpeech, language]);
+  }, [language]);
 
   const processInput = useCallback(async (input) => {
     if (!input.trim()) return;
