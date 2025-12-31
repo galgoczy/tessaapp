@@ -1,36 +1,134 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 
 /**
  * BriefingOverlay Component
  *
- * Morning briefing modal with:
+ * Morning briefing modal with real data:
+ * - Today's task stats
+ * - Tessa's personalized summary based on actual tasks
  * - Audio playback option (PRO)
- * - Stats overview (meetings, urgent, overdue)
- * - Tessa's personalized summary
- * - Ask Tessa action button
  */
 const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
   const { theme } = useTheme();
+  const { tasks, categories } = useData();
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Get today's data
+  const todayData = useMemo(() => {
+    const today = new Date();
+    const todayStr = today.toDateString();
+
+    // Tasks due today
+    const todayTasks = tasks.filter(t => {
+      if (!t.dueDate || t.isCompleted) return false;
+      return new Date(t.dueDate).toDateString() === todayStr;
+    });
+
+    // High priority tasks
+    const urgentTasks = tasks.filter(t =>
+      !t.isCompleted && t.priority === 'high'
+    );
+
+    // Overdue tasks
+    const overdueTasks = tasks.filter(t => {
+      if (!t.dueDate || t.isCompleted) return false;
+      const dueDate = new Date(t.dueDate);
+      dueDate.setHours(23, 59, 59);
+      return dueDate < today;
+    });
+
+    // Active tasks
+    const activeTasks = tasks.filter(t => !t.isCompleted);
+
+    return {
+      todayTasks,
+      urgentTasks,
+      overdueTasks,
+      activeTasks,
+      todayCount: todayTasks.length,
+      urgentCount: urgentTasks.length,
+      overdueCount: overdueTasks.length,
+      activeCount: activeTasks.length,
+    };
+  }, [tasks]);
+
+  // Generate personalized summary
+  const briefingSummary = useMemo(() => {
+    const hour = new Date().getHours();
+    let greeting = 'Good morning';
+    if (hour >= 12 && hour < 18) greeting = 'Good afternoon';
+    if (hour >= 18) greeting = 'Good evening';
+
+    let summary = `${greeting}, Geri! `;
+
+    if (todayData.activeCount === 0) {
+      summary += "You're all caught up! No pending tasks.";
+      return summary;
+    }
+
+    summary += "Here's your day:\n\n";
+
+    // Today's tasks
+    if (todayData.todayCount > 0) {
+      summary += `• ${todayData.todayCount} task${todayData.todayCount > 1 ? 's' : ''} due today\n`;
+      todayData.todayTasks.slice(0, 2).forEach(task => {
+        const cat = categories.find(c => c.id === task.categoryId);
+        summary += `  - ${task.title}${task.priority === 'high' ? ' (high priority)' : ''}`;
+        if (cat) summary += ` [${cat.name}]`;
+        summary += '\n';
+      });
+      if (todayData.todayCount > 2) {
+        summary += `  ...and ${todayData.todayCount - 2} more\n`;
+      }
+    }
+
+    // Urgent tasks
+    if (todayData.urgentCount > 0) {
+      summary += `\n• ${todayData.urgentCount} urgent task${todayData.urgentCount > 1 ? 's' : ''} need attention\n`;
+    }
+
+    // Overdue tasks
+    if (todayData.overdueCount > 0) {
+      summary += `\n• ${todayData.overdueCount} overdue task${todayData.overdueCount > 1 ? 's' : ''} — consider rescheduling\n`;
+    }
+
+    // Recommendation
+    if (todayData.urgentCount > 0) {
+      const firstUrgent = todayData.urgentTasks[0];
+      summary += `\nI'd recommend starting with "${firstUrgent.title}" first.`;
+    } else if (todayData.todayCount > 0) {
+      const firstToday = todayData.todayTasks[0];
+      summary += `\nLet's start with "${firstToday.title}".`;
+    }
+
+    return summary;
+  }, [todayData, categories]);
 
   if (!isOpen) return null;
 
-  const briefingSummary = `Good morning, Geri! Here's your day:
-
-• First meeting with Tom at 8:00 AM — high priority
-• Client call with Kezia at 10:00 AM on Zoom
-• 2 urgent emails awaiting response
-• 1 overdue task: Q4 budget review
-
-I'd recommend tackling Peter's email first, then Sarah's designs before your 10 AM call.`;
-
   const stats = [
-    { n: 3, label: 'Meetings', color: theme.accent },
-    { n: 2, label: 'Urgent', color: theme.error },
-    { n: 1, label: 'Overdue', color: theme.secondary },
+    { n: todayData.todayCount, label: 'Today', color: theme.accent },
+    { n: todayData.urgentCount, label: 'Urgent', color: '#EF4444' },
+    { n: todayData.overdueCount, label: 'Overdue', color: '#F59E0B' },
   ];
+
+  // Get time-based title
+  const getTitle = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Morning Brief';
+    if (hour < 18) return 'Afternoon Check-in';
+    return 'Evening Summary';
+  };
+
+  const getEmoji = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return '☀️';
+    if (hour < 18) return '🌤️';
+    return '🌙';
+  };
 
   return (
     <div style={{
@@ -55,7 +153,7 @@ I'd recommend tackling Peter's email first, then Sarah's designs before your 10 
           marginBottom: 20,
         }}>
           <h2 style={{ color: theme.text, fontSize: 20, fontWeight: 600, margin: 0 }}>
-            ☀️ Morning Brief
+            {getEmoji()} {getTitle()}
           </h2>
           <button
             onClick={() => { onClose(); setIsPlaying(false); }}

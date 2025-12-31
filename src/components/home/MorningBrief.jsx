@@ -1,16 +1,63 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useData } from '../../context/DataContext';
 
 /**
  * MorningBrief Component
  *
  * Clickable card showing quick summary of the day.
- * Supports two accent styles:
- * - Filled: accent background, white text
- * - Outline: white/glass background, accent border and text
+ * Shows real data: today's tasks, high priority items, events.
  */
 const MorningBrief = ({ onClick }) => {
   const { theme, isFilledStyle } = useTheme();
+  const { tasks } = useData();
+
+  // Calculate today's stats
+  const todayStats = useMemo(() => {
+    const today = new Date().toDateString();
+
+    // Tasks due today
+    const todayTasks = tasks.filter(t => {
+      if (!t.dueDate || t.isCompleted) return false;
+      return new Date(t.dueDate).toDateString() === today;
+    });
+
+    // High priority tasks
+    const urgentTasks = tasks.filter(t =>
+      !t.isCompleted && t.priority === 'high'
+    );
+
+    // Active tasks (not completed)
+    const activeTasks = tasks.filter(t => !t.isCompleted);
+
+    return {
+      todayCount: todayTasks.length,
+      urgentCount: urgentTasks.length,
+      activeCount: activeTasks.length,
+    };
+  }, [tasks]);
+
+  // Build summary text
+  const getSummaryText = () => {
+    const parts = [];
+
+    if (todayStats.todayCount > 0) {
+      parts.push(`${todayStats.todayCount} due today`);
+    }
+
+    if (todayStats.urgentCount > 0) {
+      parts.push(`${todayStats.urgentCount} urgent`);
+    }
+
+    if (parts.length === 0) {
+      if (todayStats.activeCount > 0) {
+        return `${todayStats.activeCount} active tasks`;
+      }
+      return 'All clear for today!';
+    }
+
+    return parts.join(' • ');
+  };
 
   // Filled style: accent background, white text
   // Outline style: glass background, accent border
@@ -32,6 +79,14 @@ const MorningBrief = ({ onClick }) => {
   const subtitleColor = isFilledStyle ? 'rgba(255,255,255,0.8)' : theme.textMuted;
   const arrowColor = isFilledStyle ? 'white' : theme.accent;
 
+  // Get greeting based on time
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Morning Brief';
+    if (hour < 18) return 'Afternoon Check-in';
+    return 'Evening Summary';
+  };
+
   return (
     <div
       onClick={onClick}
@@ -50,10 +105,10 @@ const MorningBrief = ({ onClick }) => {
       {/* Content */}
       <div style={{ flex: 1 }}>
         <p style={{ color: titleColor, fontSize: 16, fontWeight: 600, margin: 0 }}>
-          Quick Morning Brief
+          {getGreeting()}
         </p>
         <p style={{ color: subtitleColor, fontSize: 13, margin: 0 }}>
-          3 meetings • 2 urgent
+          {getSummaryText()}
         </p>
       </div>
 
