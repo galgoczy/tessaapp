@@ -31,9 +31,9 @@ export const ThemeProvider = ({ children }) => {
 
   const [accentId, setAccentId] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(STORAGE_KEYS.ACCENT) || 'sunset';
+      return localStorage.getItem(STORAGE_KEYS.ACCENT) || 'forest';
     }
-    return 'sunset';
+    return 'forest';
   });
 
   // Accent style: 'filled' (accent bg, white text) or 'outline' (white bg, accent border)

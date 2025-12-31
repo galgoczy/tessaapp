@@ -134,10 +134,8 @@ const Header = ({ onNavigate, onOpenSearch }) => {
 
   const menuItems = [
     { icon: 'account', label: 'Account', screen: 'account' },
-    { icon: 'search', label: 'Search', action: 'search' },
     { icon: 'settings', label: 'Settings', screen: 'settings' },
     { icon: 'focus', label: 'Focus', screen: 'focus' },
-    { icon: 'habits', label: 'Habits', screen: 'habits' },
     { icon: 'categories', label: 'Categories', screen: 'categories' },
     { icon: 'tags', label: 'Tags', screen: 'tags' },
     { icon: 'contacts', label: 'Contacts', screen: 'contacts' },
@@ -150,15 +148,9 @@ const Header = ({ onNavigate, onOpenSearch }) => {
 
   const handleMenuClick = (item) => {
     setShowMenu(false);
-    if (item.action === 'search' && onOpenSearch) {
-      onOpenSearch();
-    } else if (item.screen && onNavigate) {
+    if (item.screen && onNavigate) {
       onNavigate(item.screen);
     }
-  };
-
-  const handleThemeToggle = () => {
-    toggleMode();
   };
 
   return (
@@ -282,36 +274,6 @@ const Header = ({ onNavigate, onOpenSearch }) => {
                 </button>
               ))}
 
-              {/* Divider */}
-              <div style={{
-                height: 1,
-                background: theme.border,
-                margin: '4px 8px',
-              }} />
-
-              {/* Theme toggle - at bottom */}
-              <button
-                onClick={handleThemeToggle}
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  background: 'none',
-                  border: 'none',
-                  borderRadius: 10,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  cursor: 'pointer',
-                  color: theme.text,
-                  fontSize: 14,
-                  transition: 'background 0.2s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = theme.surface}
-                onMouseLeave={e => e.currentTarget.style.background = 'none'}
-              >
-                <Icon name={isDark ? 'sun' : 'moon'} color={theme.accent} />
-                {isDark ? 'Light Mode' : 'Dark Mode'}
-              </button>
             </GlassCard>
           </>
         )}
