@@ -578,6 +578,74 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         </div>
       )}
 
+      {/* Prominent PTT Button */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        marginBottom: 16,
+        position: 'relative',
+      }}>
+        <AIActivityRing
+          isActive={isListening}
+          size={72}
+          borderWidth={4}
+          colors={[theme.accent, theme.accentLight || '#06B6D4', theme.secondary || '#10B981']}
+        >
+          <button
+            onClick={toggleListening}
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: '50%',
+              background: isListening
+                ? `linear-gradient(135deg, ${theme.accent}dd 0%, ${theme.accentLight || theme.accent}ee 100%)`
+                : theme.gradient || theme.accent,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.3s ease',
+              boxShadow: isListening
+                ? `0 0 40px ${theme.accent}80, 0 0 80px ${theme.accent}40, inset 0 0 20px rgba(255,255,255,0.2)`
+                : `0 4px 20px ${theme.accent}50`,
+              animation: isListening ? 'none' : 'pttPulse 2s ease-in-out infinite',
+              transform: isListening ? 'scale(1.05)' : 'scale(1)',
+            }}
+          >
+            <svg
+              width={32}
+              height={32}
+              viewBox="0 0 24 24"
+              fill="white"
+              style={{
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+                animation: isListening ? 'micPulse 1s ease-in-out infinite' : 'none',
+              }}
+            >
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
+            </svg>
+          </button>
+        </AIActivityRing>
+
+        {/* Hint text */}
+        <p style={{
+          position: 'absolute',
+          bottom: -24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          color: theme.textMuted,
+          fontSize: 12,
+          margin: 0,
+          whiteSpace: 'nowrap',
+          opacity: isListening ? 0 : 0.7,
+          transition: 'opacity 0.3s',
+        }}>
+          {language === 'hu' ? 'Koppints a beszédhez' : 'Tap to speak'}
+        </p>
+      </div>
+
       {/* Voice mode indicator for Pro */}
       {voiceMode && isPro && (
         <div style={{
@@ -733,56 +801,27 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
           />
         </form>
 
-        {/* Send button (shown when there's text) */}
-        {textInput.trim() && (
-          <button
-            onClick={handleSubmit}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              background: theme.accent,
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            {Icons.send('white')}
-          </button>
-        )}
-
-        {/* Mic button - Toggle mode with AI activity ring */}
-        {!textInput.trim() && (
-          <AIActivityRing
-            isActive={isListening}
-            size={48}
-            borderWidth={3}
-            colors={[theme.accent, theme.accentLight || '#06B6D4', theme.secondary || '#10B981']}
-            style={{ flexShrink: 0 }}
-          >
-            <button
-              onClick={toggleListening}
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                background: isListening ? theme.accent : theme.surfaceGlass,
-                border: `2px solid ${isListening ? theme.accent : theme.borderGlass}`,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s',
-                boxShadow: isListening ? `0 0 24px ${theme.glowColor}` : 'none',
-              }}
-            >
-              {Icons.mic(isListening ? 'white' : theme.accent)}
-            </button>
-          </AIActivityRing>
-        )}
+        {/* Send button */}
+        <button
+          onClick={handleSubmit}
+          disabled={!textInput.trim()}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            background: textInput.trim() ? theme.accent : theme.surfaceGlass,
+            border: textInput.trim() ? 'none' : `1px solid ${theme.borderGlass}`,
+            cursor: textInput.trim() ? 'pointer' : 'default',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            opacity: textInput.trim() ? 1 : 0.5,
+            transition: 'all 0.2s',
+          }}
+        >
+          {Icons.send(textInput.trim() ? 'white' : theme.textMuted)}
+        </button>
       </div>
 
       {/* Animation styles */}
@@ -824,6 +863,22 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         @keyframes aiOrbit2 {
           0% { transform: translate(-50%, -50%) rotate(240deg) translateX(24px) rotate(-240deg); }
           100% { transform: translate(-50%, -50%) rotate(600deg) translateX(24px) rotate(-600deg); }
+        }
+
+        /* PTT Button Animations */
+        @keyframes pttPulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 4px 20px var(--accent-glow, rgba(139, 92, 246, 0.3));
+          }
+          50% {
+            transform: scale(1.03);
+            box-shadow: 0 6px 30px var(--accent-glow, rgba(139, 92, 246, 0.5));
+          }
+        }
+        @keyframes micPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.9; }
         }
       `}</style>
     </div>
