@@ -74,11 +74,11 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
         {/* Morning Brief - slightly higher with less margin */}
         <MorningBrief onClick={onOpenBriefing} />
 
-        {/* Your Stuff indicator - slightly higher */}
+        {/* Your Stuff indicator */}
         <div style={{
           textAlign: 'center',
-          marginTop: -44,
-          paddingBottom: 80,
+          marginTop: -20,
+          paddingBottom: 120,
           opacity: quoteOpacity,
           transition: 'opacity 0.5s',
         }}>
