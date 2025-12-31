@@ -578,72 +578,102 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         </div>
       )}
 
-      {/* Prominent PTT Button */}
+      {/* Prominent PTT Button - Wide pill shape */}
       <div style={{
         display: 'flex',
         justifyContent: 'center',
         marginBottom: 16,
-        position: 'relative',
+        padding: '0 16px',
       }}>
-        <AIActivityRing
-          isActive={isListening}
-          size={72}
-          borderWidth={4}
-          colors={[theme.accent, theme.accentLight || '#06B6D4', theme.secondary || '#10B981']}
+        <button
+          onClick={toggleListening}
+          style={{
+            width: '100%',
+            maxWidth: 320,
+            height: 64,
+            borderRadius: 32,
+            background: isListening
+              ? `linear-gradient(135deg, ${theme.accent}dd 0%, ${theme.accentLight || theme.accent}ee 100%)`
+              : theme.gradient || theme.accent,
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            transition: 'all 0.3s ease',
+            boxShadow: isListening
+              ? `0 0 40px ${theme.accent}80, 0 0 80px ${theme.accent}40, inset 0 0 20px rgba(255,255,255,0.2)`
+              : `0 4px 20px ${theme.accent}50`,
+            animation: isListening ? 'none' : 'pttPulse 2s ease-in-out infinite',
+            transform: isListening ? 'scale(1.02)' : 'scale(1)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
         >
-          <button
-            onClick={toggleListening}
+          {/* Animated gradient overlay when active */}
+          {isListening && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)`,
+              animation: 'shimmer 2s linear infinite',
+            }} />
+          )}
+
+          <svg
+            width={28}
+            height={28}
+            viewBox="0 0 24 24"
+            fill="white"
             style={{
-              width: 72,
-              height: 72,
-              borderRadius: '50%',
-              background: isListening
-                ? `linear-gradient(135deg, ${theme.accent}dd 0%, ${theme.accentLight || theme.accent}ee 100%)`
-                : theme.gradient || theme.accent,
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.3s ease',
-              boxShadow: isListening
-                ? `0 0 40px ${theme.accent}80, 0 0 80px ${theme.accent}40, inset 0 0 20px rgba(255,255,255,0.2)`
-                : `0 4px 20px ${theme.accent}50`,
-              animation: isListening ? 'none' : 'pttPulse 2s ease-in-out infinite',
-              transform: isListening ? 'scale(1.05)' : 'scale(1)',
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+              animation: isListening ? 'micPulse 1s ease-in-out infinite' : 'none',
+              position: 'relative',
+              zIndex: 1,
             }}
           >
-            <svg
-              width={32}
-              height={32}
-              viewBox="0 0 24 24"
-              fill="white"
-              style={{
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
-                animation: isListening ? 'micPulse 1s ease-in-out infinite' : 'none',
-              }}
-            >
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
-            </svg>
-          </button>
-        </AIActivityRing>
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
+          </svg>
 
-        {/* Hint text */}
-        <p style={{
-          position: 'absolute',
-          bottom: -24,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          color: theme.textMuted,
-          fontSize: 12,
-          margin: 0,
-          whiteSpace: 'nowrap',
-          opacity: isListening ? 0 : 0.7,
-          transition: 'opacity 0.3s',
-        }}>
-          {language === 'hu' ? 'Koppints a beszédhez' : 'Tap to speak'}
-        </p>
+          <span style={{
+            color: 'white',
+            fontSize: 16,
+            fontWeight: 600,
+            letterSpacing: 0.5,
+            position: 'relative',
+            zIndex: 1,
+            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+          }}>
+            {isListening
+              ? (language === 'hu' ? 'Hallgatom...' : 'Listening...')
+              : (language === 'hu' ? 'Koppints a beszédhez' : 'Tap to speak')}
+          </span>
+
+          {/* Activity ring dots when listening */}
+          {isListening && (
+            <>
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: 'white',
+                    boxShadow: '0 0 10px rgba(255,255,255,0.8)',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    animation: `pttOrbit${i} 3s linear infinite`,
+                  }}
+                />
+              ))}
+            </>
+          )}
+        </button>
       </div>
 
       {/* Voice mode indicator for Pro */}
@@ -872,13 +902,32 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
             box-shadow: 0 4px 20px var(--accent-glow, rgba(139, 92, 246, 0.3));
           }
           50% {
-            transform: scale(1.03);
+            transform: scale(1.02);
             box-shadow: 0 6px 30px var(--accent-glow, rgba(139, 92, 246, 0.5));
           }
         }
         @keyframes micPulse {
           0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.1); opacity: 0.9; }
+          50% { transform: scale(1.15); opacity: 0.9; }
+        }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        @keyframes pttOrbit0 {
+          0% { transform: translate(-50%, -50%) rotate(0deg) translateX(140px) rotate(0deg); opacity: 0.8; }
+          50% { opacity: 1; }
+          100% { transform: translate(-50%, -50%) rotate(360deg) translateX(140px) rotate(-360deg); opacity: 0.8; }
+        }
+        @keyframes pttOrbit1 {
+          0% { transform: translate(-50%, -50%) rotate(120deg) translateX(140px) rotate(-120deg); opacity: 0.8; }
+          50% { opacity: 1; }
+          100% { transform: translate(-50%, -50%) rotate(480deg) translateX(140px) rotate(-480deg); opacity: 0.8; }
+        }
+        @keyframes pttOrbit2 {
+          0% { transform: translate(-50%, -50%) rotate(240deg) translateX(140px) rotate(-240deg); opacity: 0.8; }
+          50% { opacity: 1; }
+          100% { transform: translate(-50%, -50%) rotate(600deg) translateX(140px) rotate(-600deg); opacity: 0.8; }
         }
       `}</style>
     </div>
