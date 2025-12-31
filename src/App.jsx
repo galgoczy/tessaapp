@@ -31,9 +31,27 @@ const AppContent = () => {
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [briefingOpen, setBriefingOpen] = useState(false);
 
+  // Voice overlay props for initial message and voice mode
+  const [voiceInitialMessage, setVoiceInitialMessage] = useState(null);
+  const [voiceMode, setVoiceMode] = useState(false);
+
   // Navigation handler
   const navigate = (screen) => {
     setCurrentScreen(screen);
+  };
+
+  // Open voice with optional initial message
+  const openVoice = (initialMessage = null, enableVoiceMode = false) => {
+    setVoiceInitialMessage(initialMessage);
+    setVoiceMode(enableVoiceMode);
+    setVoiceOpen(true);
+  };
+
+  // Close voice overlay and reset state
+  const closeVoice = () => {
+    setVoiceOpen(false);
+    setVoiceInitialMessage(null);
+    setVoiceMode(false);
   };
 
   // Render current screen
@@ -60,7 +78,7 @@ const AppContent = () => {
       default:
         return (
           <HomeScreen
-            onOpenVoice={() => setVoiceOpen(true)}
+            onOpenVoice={() => openVoice()}
             onOpenBriefing={() => setBriefingOpen(true)}
             onNavigate={navigate}
           />
@@ -104,14 +122,17 @@ const AppContent = () => {
       {/* Global Overlays */}
       <VoiceOverlay
         isOpen={voiceOpen}
-        onClose={() => setVoiceOpen(false)}
+        onClose={closeVoice}
+        onNavigate={navigate}
+        initialMessage={voiceInitialMessage}
+        voiceMode={voiceMode}
       />
       <BriefingOverlay
         isOpen={briefingOpen}
         onClose={() => setBriefingOpen(false)}
-        onAskTessa={() => {
+        onAskTessa={(message, enableVoice) => {
           setBriefingOpen(false);
-          setVoiceOpen(true);
+          openVoice(message, enableVoice);
         }}
       />
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
@@ -9,32 +9,50 @@ import GlassCard from '../ui/GlassCard';
  * Morning briefing modal with real data:
  * - Today's task stats
  * - Tessa's personalized summary based on actual tasks
- * - Audio playback option (PRO)
+ * - Audio playback option (PRO) - auto-starts for Pro users
  */
 const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
   const { theme } = useTheme();
   const { tasks, categories, settings } = useData();
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hasAutoStarted, setHasAutoStarted] = useState(false);
 
   const userName = settings?.userName || 'there';
+  const isPro = settings?.isPro || false;
+
+  // Auto-start reading for Pro users
+  useEffect(() => {
+    if (isOpen && isPro && !hasAutoStarted) {
+      setHasAutoStarted(true);
+      setIsPlaying(true);
+      // Simulate reading duration based on content length
+      const readDuration = 4000 + Math.random() * 2000;
+      setTimeout(() => setIsPlaying(false), readDuration);
+    }
+  }, [isOpen, isPro, hasAutoStarted]);
+
+  // Reset auto-start when closing
+  useEffect(() => {
+    if (!isOpen) {
+      setHasAutoStarted(false);
+      setIsPlaying(false);
+    }
+  }, [isOpen]);
 
   // Get today's data
   const todayData = useMemo(() => {
     const today = new Date();
     const todayStr = today.toDateString();
 
-    // Tasks due today
     const todayTasks = tasks.filter(t => {
       if (!t.dueDate || t.isCompleted) return false;
       return new Date(t.dueDate).toDateString() === todayStr;
     });
 
-    // High priority tasks
     const urgentTasks = tasks.filter(t =>
       !t.isCompleted && t.priority === 'high'
     );
 
-    // Overdue tasks
     const overdueTasks = tasks.filter(t => {
       if (!t.dueDate || t.isCompleted) return false;
       const dueDate = new Date(t.dueDate);
@@ -42,7 +60,6 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
       return dueDate < today;
     });
 
-    // Active tasks
     const activeTasks = tasks.filter(t => !t.isCompleted);
 
     return {
@@ -73,7 +90,6 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
 
     summary += "Here's your day:\n\n";
 
-    // Today's tasks
     if (todayData.todayCount > 0) {
       summary += `• ${todayData.todayCount} task${todayData.todayCount > 1 ? 's' : ''} due today\n`;
       todayData.todayTasks.slice(0, 2).forEach(task => {
@@ -87,17 +103,14 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
       }
     }
 
-    // Urgent tasks
     if (todayData.urgentCount > 0) {
       summary += `\n• ${todayData.urgentCount} urgent task${todayData.urgentCount > 1 ? 's' : ''} need attention\n`;
     }
 
-    // Overdue tasks
     if (todayData.overdueCount > 0) {
       summary += `\n• ${todayData.overdueCount} overdue task${todayData.overdueCount > 1 ? 's' : ''} — consider rescheduling\n`;
     }
 
-    // Recommendation
     if (todayData.urgentCount > 0) {
       const firstUrgent = todayData.urgentTasks[0];
       summary += `\nI'd recommend starting with "${firstUrgent.title}" first.`;
@@ -117,7 +130,6 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
     { n: todayData.overdueCount, label: 'Overdue', color: '#F59E0B' },
   ];
 
-  // Get time-based title
   const getTitle = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Morning Brief';
@@ -130,6 +142,14 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
     if (hour < 12) return '☀️';
     if (hour < 18) return '🌤️';
     return '🌙';
+  };
+
+  const handleAskTessa = () => {
+    onClose();
+    // Pass the question to ask Tessa
+    if (onAskTessa) {
+      onAskTessa("What should I do first?", true); // true = voiceMode
+    }
   };
 
   return (
@@ -177,16 +197,17 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
           </button>
         </div>
 
-        {/* PRO Audio Player */}
+        {/* PRO Audio Player - Auto-plays for Pro users */}
         <div style={{
-          background: theme.glassGradient,
+          background: isPlaying ? `${theme.accent}15` : theme.glassGradient,
           borderRadius: 16,
           padding: '14px 16px',
           marginBottom: 16,
-          border: `1px solid ${theme.border}`,
+          border: `1px solid ${isPlaying ? theme.accent : theme.border}`,
           display: 'flex',
           alignItems: 'center',
           gap: 12,
+          transition: 'all 0.3s',
         }}>
           <button
             onClick={() => setIsPlaying(!isPlaying)}
@@ -219,8 +240,10 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
               {isPlaying ? 'Tessa is reading...' : 'Let Tessa read this'}
             </p>
             <p style={{ color: theme.textSecondary, fontSize: 12, margin: 0 }}>
-              {settings?.isPro ? (
-                <span style={{ color: theme.accent }}>Voice enabled</span>
+              {isPro ? (
+                <span style={{ color: theme.accent }}>
+                  {isPlaying ? 'Voice active' : 'Voice enabled'}
+                </span>
               ) : (
                 <span style={{
                   background: theme.gradient,
@@ -294,7 +317,28 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
               borderRadius: '50%',
               background: theme.gradient,
               boxShadow: `0 2px 8px ${theme.glowColor}`,
-            }} />
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {isPlaying && (
+                <div style={{ display: 'flex', gap: 1 }}>
+                  {[0, 1, 2].map(i => (
+                    <div
+                      key={i}
+                      style={{
+                        width: 2,
+                        height: 8,
+                        background: 'white',
+                        borderRadius: 1,
+                        animation: 'speakBar 0.4s ease-in-out infinite',
+                        animationDelay: `${i * 0.1}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
             <p style={{ color: theme.accent, fontSize: 13, fontWeight: 600, margin: 0 }}>
               Tessa's Summary
             </p>
@@ -312,32 +356,44 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
 
         {/* Ask Tessa button */}
         <button
-          onClick={onAskTessa}
+          onClick={handleAskTessa}
           style={{
             width: '100%',
-            background: theme.glassGradient,
+            background: theme.gradient,
             borderRadius: 14,
             padding: 14,
-            border: `1px solid ${theme.border}`,
+            border: 'none',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 12,
+            boxShadow: `0 4px 16px ${theme.glowColor}`,
           }}
         >
           <div style={{
             width: 32,
             height: 32,
             borderRadius: '50%',
-            background: theme.gradient,
-          }} />
+            background: 'rgba(255,255,255,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="white">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
+            </svg>
+          </div>
           <div style={{ textAlign: 'left' }}>
-            <p style={{ color: theme.text, fontSize: 14, fontWeight: 500, margin: 0 }}>
+            <p style={{ color: 'white', fontSize: 14, fontWeight: 600, margin: 0 }}>
               Ask Tessa
             </p>
-            <p style={{ color: theme.textSecondary, fontSize: 12, margin: 0 }}>
+            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, margin: 0 }}>
               "What should I do first?"
             </p>
+          </div>
+          <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.8)' }}>
+            →
           </div>
         </button>
       </GlassCard>
@@ -348,6 +404,10 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
         @keyframes bar {
           0%, 100% { height: 4px; }
           50% { height: 16px; }
+        }
+        @keyframes speakBar {
+          0%, 100% { height: 4px; }
+          50% { height: 10px; }
         }
       `}</style>
     </div>

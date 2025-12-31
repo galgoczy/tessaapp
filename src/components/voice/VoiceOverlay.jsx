@@ -1,8 +1,42 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import WaveAnimation from './WaveAnimation';
+
+// Icons
+const Icons = {
+  mic: (color, filled = true) => (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill={filled ? color : 'none'} stroke={filled ? 'none' : color} strokeWidth="2">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
+    </svg>
+  ),
+  image: (color) => (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  ),
+  file: (color) => (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
+  ),
+  send: (color) => (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill={color}>
+      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+    </svg>
+  ),
+  waveform: (color) => (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
+      <path d="M2 12h2m4 0h2m4 0h2m4 0h2" />
+      <path d="M6 8v8m4-12v16m4-12v12m4-8v4" />
+    </svg>
+  ),
+};
 
 // Tessa AI response types and logic
 const TESSA_RESPONSES = {
@@ -36,6 +70,15 @@ const TESSA_RESPONSES = {
     afternoon: (userName) => `Good afternoon, ${userName}! Let me help you stay on track. Would you like a quick update on your remaining tasks?`,
     evening: (userName) => `Good evening, ${userName}! Time to wrap up. I can help you review what you accomplished today or plan for tomorrow.`,
   },
+  whatFirst: (userName, urgentTask, todayTask) => {
+    if (urgentTask) {
+      return `${userName}, I'd recommend starting with "${urgentTask.title}" - it's marked as high priority. Would you like me to help you break it down into smaller steps?`;
+    }
+    if (todayTask) {
+      return `${userName}, let's start with "${todayTask.title}" - it's due today. Want me to set a timer or add any notes?`;
+    }
+    return `${userName}, you're all caught up! No urgent or due-today tasks. Would you like to plan ahead or review your upcoming tasks?`;
+  },
   unknown: [
     "I'm not sure I understood that. Could you try rephrasing?",
     "Hmm, I didn't quite catch that. Can you say it differently?",
@@ -57,6 +100,14 @@ const simulateTessaResponse = (input, data, settings) => {
     urgent: data.tasks.filter(t => !t.isCompleted && t.priority === 'high').length,
     completed: data.tasks.filter(t => t.isCompleted).length,
   };
+
+  const urgentTask = data.tasks.find(t => !t.isCompleted && t.priority === 'high');
+  const todayTask = data.tasks.find(t => t.dueDate && !t.isCompleted && new Date(t.dueDate).toDateString() === today);
+
+  // What should I do first
+  if (text.includes('what should') || text.includes('do first') || text.includes('start with') || text.includes('recommend')) {
+    return { type: 'suggestion', message: TESSA_RESPONSES.whatFirst(userName, urgentTask, todayTask) };
+  }
 
   // Task-related queries
   if (text.includes('task') || text.includes('todo') || text.includes('to do')) {
@@ -80,7 +131,7 @@ const simulateTessaResponse = (input, data, settings) => {
 
   // Email queries
   if (text.includes('email') || text.includes('mail') || text.includes('inbox')) {
-    return { type: 'info', message: TESSA_RESPONSES.emails.summary(2) }; // Demo: 2 unread
+    return { type: 'info', message: TESSA_RESPONSES.emails.summary(2) };
   }
 
   // Notes queries
@@ -96,7 +147,7 @@ const simulateTessaResponse = (input, data, settings) => {
   }
 
   // Day summary / suggestion
-  if (text.includes('my day') || text.includes('today') || text.includes('summary') || text.includes('what should')) {
+  if (text.includes('my day') || text.includes('today') || text.includes('summary')) {
     if (hour < 12) {
       return { type: 'suggestion', message: TESSA_RESPONSES.suggestions.morning(userName) };
     } else if (hour < 18) {
@@ -124,7 +175,7 @@ const simulateTessaResponse = (input, data, settings) => {
     };
   }
 
-  // Unknown - try to be helpful
+  // Unknown
   const unknowns = TESSA_RESPONSES.unknown;
   return { type: 'unknown', message: unknowns[Math.floor(Math.random() * unknowns.length)] };
 };
@@ -134,23 +185,35 @@ const simulateTessaResponse = (input, data, settings) => {
  *
  * Voice interaction modal with Tessa AI functionality.
  * Features:
- * - Voice/text input
+ * - Voice/text input with voice mode indicator
  * - Context-aware responses
  * - Action suggestions
  * - Conversation history
+ * - Image/file upload placeholders
+ * - Auto-voice mode for Pro users
  */
-const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
+const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: initialVoiceMode }) => {
   const { theme } = useTheme();
   const { tasks, notes, events, settings, addTask, addNote } = useData();
 
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(initialVoiceMode || false);
   const [wavePhase, setWavePhase] = useState(0);
   const [textInput, setTextInput] = useState('');
   const [conversation, setConversation] = useState([]);
   const [pendingAction, setPendingAction] = useState(null);
+  const conversationEndRef = useRef(null);
+  const initialMessageProcessed = useRef(false);
 
+  const isPro = settings?.isPro || false;
   const data = useMemo(() => ({ tasks, notes, events }), [tasks, notes, events]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conversation]);
 
   // Initial greeting on open
   useEffect(() => {
@@ -168,8 +231,24 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
       }
 
       setConversation([{ role: 'tessa', message: greeting, type: 'greeting' }]);
+
+      // Auto-enable voice mode for Pro users
+      if (isPro && initialVoiceMode) {
+        setVoiceMode(true);
+        simulateSpeaking();
+      }
     }
-  }, [isOpen, conversation.length, settings]);
+  }, [isOpen, conversation.length, settings, isPro, initialVoiceMode]);
+
+  // Process initial message (from briefing "Ask Tessa")
+  useEffect(() => {
+    if (isOpen && initialMessage && !initialMessageProcessed.current && conversation.length > 0) {
+      initialMessageProcessed.current = true;
+      setTimeout(() => {
+        processInput(initialMessage);
+      }, 500);
+    }
+  }, [isOpen, initialMessage, conversation.length]);
 
   // Animate wave when overlay is open
   useEffect(() => {
@@ -186,28 +265,39 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
     if (!isOpen) {
       setIsListening(false);
       setIsProcessing(false);
+      setIsSpeaking(false);
       setTextInput('');
-      // Don't reset conversation - keep history for the session
+      setConversation([]);
+      setPendingAction(null);
+      initialMessageProcessed.current = false;
     }
   }, [isOpen]);
+
+  // Simulate Tessa speaking (for Pro users)
+  const simulateSpeaking = useCallback((duration = 2000) => {
+    if (isPro && voiceMode) {
+      setIsSpeaking(true);
+      setTimeout(() => setIsSpeaking(false), duration);
+    }
+  }, [isPro, voiceMode]);
 
   const processInput = useCallback((input) => {
     if (!input.trim()) return;
 
-    // Add user message to conversation
     setConversation(prev => [...prev, { role: 'user', message: input }]);
     setIsProcessing(true);
 
-    // Handle pending actions
     if (pendingAction) {
       setTimeout(() => {
         if (pendingAction === 'create_task') {
           addTask({ title: input, priority: 'medium' });
+          const response = TESSA_RESPONSES.tasks.created(input);
           setConversation(prev => [...prev, {
             role: 'tessa',
-            message: TESSA_RESPONSES.tasks.created(input),
+            message: response,
             type: 'success'
           }]);
+          if (voiceMode) simulateSpeaking(1500);
         } else if (pendingAction === 'create_note') {
           addNote({ content: input });
           setConversation(prev => [...prev, {
@@ -215,6 +305,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
             message: TESSA_RESPONSES.notes.created,
             type: 'success'
           }]);
+          if (voiceMode) simulateSpeaking(1000);
         }
         setPendingAction(null);
         setIsProcessing(false);
@@ -222,7 +313,6 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
       return;
     }
 
-    // Simulate AI processing delay
     setTimeout(() => {
       const response = simulateTessaResponse(input, data, settings);
       setConversation(prev => [...prev, { role: 'tessa', ...response }]);
@@ -232,8 +322,14 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
       }
 
       setIsProcessing(false);
+
+      // Simulate voice response for Pro users
+      if (voiceMode) {
+        const speakDuration = Math.min(response.message.length * 40, 4000);
+        simulateSpeaking(speakDuration);
+      }
     }, 800 + Math.random() * 400);
-  }, [data, settings, pendingAction, addTask, addNote]);
+  }, [data, settings, pendingAction, addTask, addNote, voiceMode, simulateSpeaking]);
 
   const handleSubmit = (e) => {
     e?.preventDefault();
@@ -247,27 +343,35 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
     processInput(suggestion);
   };
 
-  // Simulate voice recognition
   const handleVoiceEnd = () => {
     if (isListening) {
       setIsListening(false);
-      // Simulate recognized speech
       const demoQueries = [
         "What are my tasks for today?",
         "Show me my calendar",
         "Help me plan my day",
-        "Create a new note",
+        "What should I do first?",
       ];
       const randomQuery = demoQueries[Math.floor(Math.random() * demoQueries.length)];
       processInput(randomQuery);
     }
   };
 
+  const handleFileUpload = () => {
+    // Placeholder for file upload
+    alert('File upload coming soon!');
+  };
+
+  const handleImageUpload = () => {
+    // Placeholder for image upload
+    alert('Image upload coming soon!');
+  };
+
   if (!isOpen) return null;
 
   const suggestions = pendingAction
     ? []
-    : ['My day', 'Tasks', 'Calendar', 'New note'];
+    : ['My day', 'Tasks', 'What should I do first?', 'New note'];
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -304,13 +408,34 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
             borderRadius: '50%',
             background: theme.gradient,
             boxShadow: `0 4px 12px ${theme.glowColor}`,
-          }} />
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            {isSpeaking && (
+              <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                {[0, 1, 2].map(i => (
+                  <div
+                    key={i}
+                    style={{
+                      width: 3,
+                      height: 12,
+                      background: 'white',
+                      borderRadius: 2,
+                      animation: 'speakBar 0.5s ease-in-out infinite',
+                      animationDelay: `${i * 0.1}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
           <div>
             <p style={{ color: theme.text, fontSize: 16, fontWeight: 600, margin: 0 }}>
               Tessa
             </p>
             <p style={{ color: theme.textSecondary, fontSize: 12, margin: 0 }}>
-              {isProcessing ? 'Thinking...' : isListening ? 'Listening...' : 'Ready to help'}
+              {isSpeaking ? 'Speaking...' : isProcessing ? 'Thinking...' : isListening ? 'Listening...' : 'Ready to help'}
             </p>
           </div>
         </div>
@@ -338,7 +463,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
       <div style={{
         flex: 1,
         overflowY: 'auto',
-        marginBottom: 20,
+        marginBottom: 16,
         display: 'flex',
         flexDirection: 'column',
         gap: 16,
@@ -389,7 +514,6 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
           </div>
         ))}
 
-        {/* Processing indicator */}
         {isProcessing && (
           <div style={{ display: 'flex', alignItems: 'flex-start' }}>
             <GlassCard theme={theme} style={{ padding: '12px 16px' }}>
@@ -411,16 +535,17 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
             </GlassCard>
           </div>
         )}
+        <div ref={conversationEndRef} />
       </div>
 
       {/* Quick suggestions */}
-      {suggestions.length > 0 && !isListening && (
+      {suggestions.length > 0 && !isListening && !voiceMode && (
         <div style={{
           display: 'flex',
           gap: 8,
           flexWrap: 'wrap',
           justifyContent: 'center',
-          marginBottom: 16,
+          marginBottom: 12,
         }}>
           {suggestions.map(s => (
             <button
@@ -443,7 +568,59 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
         </div>
       )}
 
-      {/* Wave animation */}
+      {/* Voice mode indicator for Pro */}
+      {voiceMode && isPro && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          marginBottom: 16,
+          padding: '12px 20px',
+          background: `${theme.accent}15`,
+          borderRadius: 16,
+          border: `1px solid ${theme.accent}30`,
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3,
+          }}>
+            {[0, 1, 2, 3, 4].map(i => (
+              <div
+                key={i}
+                style={{
+                  width: 3,
+                  height: isListening || isSpeaking ? 16 : 8,
+                  background: theme.accent,
+                  borderRadius: 2,
+                  transition: 'height 0.2s',
+                  animation: (isListening || isSpeaking) ? 'voiceBar 0.4s ease-in-out infinite' : 'none',
+                  animationDelay: `${i * 0.08}s`,
+                }}
+              />
+            ))}
+          </div>
+          <span style={{ color: theme.accent, fontSize: 13, fontWeight: 500 }}>
+            {isListening ? 'Listening...' : isSpeaking ? 'Tessa is speaking...' : 'Voice mode active'}
+          </span>
+          <button
+            onClick={() => setVoiceMode(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: theme.textMuted,
+              fontSize: 12,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Switch to text
+          </button>
+        </div>
+      )}
+
+      {/* Wave animation when listening */}
       {isListening && (
         <div style={{
           display: 'flex',
@@ -461,9 +638,47 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
       {/* Input area */}
       <div style={{
         display: 'flex',
-        gap: 12,
+        gap: 8,
         alignItems: 'center',
       }}>
+        {/* File upload button */}
+        <button
+          onClick={handleFileUpload}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            background: theme.surfaceGlass,
+            border: `1px solid ${theme.borderGlass}`,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {Icons.file(theme.textMuted)}
+        </button>
+
+        {/* Image upload button */}
+        <button
+          onClick={handleImageUpload}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            background: theme.surfaceGlass,
+            border: `1px solid ${theme.borderGlass}`,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {Icons.image(theme.textMuted)}
+        </button>
+
         {/* Text input */}
         <form onSubmit={handleSubmit} style={{ flex: 1 }}>
           <input
@@ -473,50 +688,65 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
             placeholder={pendingAction ? "Type your response..." : "Ask Tessa anything..."}
             style={{
               width: '100%',
-              padding: '14px 18px',
+              padding: '12px 16px',
               background: theme.surfaceGlass,
               backdropFilter: 'blur(10px)',
               border: `1px solid ${theme.borderGlass}`,
-              borderRadius: 20,
+              borderRadius: 16,
               color: theme.text,
-              fontSize: 15,
+              fontSize: 14,
               outline: 'none',
             }}
           />
         </form>
 
-        {/* Mic button */}
-        <button
-          onMouseDown={() => setIsListening(true)}
-          onMouseUp={handleVoiceEnd}
-          onMouseLeave={handleVoiceEnd}
-          onTouchStart={() => setIsListening(true)}
-          onTouchEnd={handleVoiceEnd}
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: '50%',
-            background: isListening ? theme.accent : theme.surfaceGlass,
-            border: `2px solid ${isListening ? theme.accent : theme.borderGlass}`,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s',
-            boxShadow: isListening ? `0 0 24px ${theme.glowColor}` : 'none',
-            flexShrink: 0,
-          }}
-        >
-          <svg
-            width={22}
-            height={22}
-            viewBox="0 0 24 24"
-            fill={isListening ? 'white' : theme.accent}
+        {/* Send button (shown when there's text) */}
+        {textInput.trim() && (
+          <button
+            onClick={handleSubmit}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              background: theme.accent,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
           >
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
-          </svg>
-        </button>
+            {Icons.send('white')}
+          </button>
+        )}
+
+        {/* Mic button */}
+        {!textInput.trim() && (
+          <button
+            onMouseDown={() => setIsListening(true)}
+            onMouseUp={handleVoiceEnd}
+            onMouseLeave={handleVoiceEnd}
+            onTouchStart={() => setIsListening(true)}
+            onTouchEnd={handleVoiceEnd}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              background: isListening ? theme.accent : theme.surfaceGlass,
+              border: `2px solid ${isListening ? theme.accent : theme.borderGlass}`,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              boxShadow: isListening ? `0 0 24px ${theme.glowColor}` : 'none',
+              flexShrink: 0,
+            }}
+          >
+            {Icons.mic(isListening ? 'white' : theme.accent)}
+          </button>
+        )}
       </div>
 
       {/* Animation styles */}
@@ -524,6 +754,14 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate }) => {
         @keyframes typingDot {
           0%, 100% { opacity: 0.3; transform: translateY(0); }
           50% { opacity: 1; transform: translateY(-4px); }
+        }
+        @keyframes speakBar {
+          0%, 100% { height: 6px; }
+          50% { height: 14px; }
+        }
+        @keyframes voiceBar {
+          0%, 100% { height: 6px; }
+          50% { height: 18px; }
         }
       `}</style>
     </div>
