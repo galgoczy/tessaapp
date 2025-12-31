@@ -86,7 +86,7 @@ const HomeScreen = ({ onOpenVoice, onOpenBriefing, onNavigate }) => {
             color: theme.textSecondary,
             fontSize: 12,
             letterSpacing: 3,
-            marginBottom: 12,
+            marginBottom: 4,
             fontWeight: 500,
           }}>YOUR STUFF</p>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
