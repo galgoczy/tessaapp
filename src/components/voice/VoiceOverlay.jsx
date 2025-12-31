@@ -40,6 +40,72 @@ const Icons = {
   ),
 };
 
+/**
+ * AIActivityRing - Animated ring that shows AI activity
+ * Displays a rotating gradient border when AI is processing
+ */
+const AIActivityRing = ({ isActive, size = 48, borderWidth = 3, children, colors, style }) => {
+  if (!isActive) {
+    return <div style={style}>{children}</div>;
+  }
+
+  return (
+    <div style={{
+      position: 'relative',
+      width: size,
+      height: size,
+      ...style,
+    }}>
+      {/* Outer glow */}
+      <div style={{
+        position: 'absolute',
+        inset: -8,
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${colors?.[0] || '#8B5CF6'}30 0%, transparent 70%)`,
+        animation: 'aiPulse 2s ease-in-out infinite',
+      }} />
+
+      {/* Rotating gradient ring */}
+      <div style={{
+        position: 'absolute',
+        inset: -borderWidth,
+        borderRadius: '50%',
+        background: `conic-gradient(from 0deg, ${colors?.[0] || '#8B5CF6'}, ${colors?.[1] || '#06B6D4'}, ${colors?.[2] || '#10B981'}, ${colors?.[0] || '#8B5CF6'})`,
+        animation: 'aiSpin 2s linear infinite',
+      }} />
+
+      {/* Inner mask */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        borderRadius: '50%',
+        background: 'inherit',
+      }}>
+        {children}
+      </div>
+
+      {/* Orbiting dots */}
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: colors?.[i] || '#8B5CF6',
+            boxShadow: `0 0 8px ${colors?.[i] || '#8B5CF6'}`,
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            animation: `aiOrbit${i} 3s linear infinite`,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 
 /**
  * VoiceOverlay Component
@@ -339,34 +405,41 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         marginBottom: 20,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            background: theme.gradient,
-            boxShadow: `0 4px 12px ${theme.glowColor}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            {isSpeaking && (
-              <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                {[0, 1, 2].map(i => (
-                  <div
-                    key={i}
-                    style={{
-                      width: 3,
-                      height: 12,
-                      background: 'white',
-                      borderRadius: 2,
-                      animation: 'speakBar 0.5s ease-in-out infinite',
-                      animationDelay: `${i * 0.1}s`,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          <AIActivityRing
+            isActive={isProcessing || isSpeaking}
+            size={40}
+            borderWidth={3}
+            colors={[theme.accent, theme.accentLight || '#06B6D4', theme.secondary || '#10B981']}
+          >
+            <div style={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              background: theme.gradient,
+              boxShadow: `0 4px 12px ${theme.glowColor}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {(isSpeaking || isProcessing) && (
+                <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  {[0, 1, 2].map(i => (
+                    <div
+                      key={i}
+                      style={{
+                        width: 3,
+                        height: isProcessing ? 8 : 12,
+                        background: 'white',
+                        borderRadius: 2,
+                        animation: isProcessing ? 'thinkingBar 0.6s ease-in-out infinite' : 'speakBar 0.5s ease-in-out infinite',
+                        animationDelay: `${i * 0.1}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </AIActivityRing>
           <div>
             <p style={{ color: theme.text, fontSize: 16, fontWeight: 600, margin: 0 }}>
               Tessa
@@ -681,27 +754,34 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
           </button>
         )}
 
-        {/* Mic button - Toggle mode */}
+        {/* Mic button - Toggle mode with AI activity ring */}
         {!textInput.trim() && (
-          <button
-            onClick={toggleListening}
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: '50%',
-              background: isListening ? theme.accent : theme.surfaceGlass,
-              border: `2px solid ${isListening ? theme.accent : theme.borderGlass}`,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-              boxShadow: isListening ? `0 0 24px ${theme.glowColor}` : 'none',
-              flexShrink: 0,
-            }}
+          <AIActivityRing
+            isActive={isListening}
+            size={48}
+            borderWidth={3}
+            colors={[theme.accent, theme.accentLight || '#06B6D4', theme.secondary || '#10B981']}
+            style={{ flexShrink: 0 }}
           >
-            {Icons.mic(isListening ? 'white' : theme.accent)}
-          </button>
+            <button
+              onClick={toggleListening}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                background: isListening ? theme.accent : theme.surfaceGlass,
+                border: `2px solid ${isListening ? theme.accent : theme.borderGlass}`,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+                boxShadow: isListening ? `0 0 24px ${theme.glowColor}` : 'none',
+              }}
+            >
+              {Icons.mic(isListening ? 'white' : theme.accent)}
+            </button>
+          </AIActivityRing>
         )}
       </div>
 
@@ -718,6 +798,32 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         @keyframes voiceBar {
           0%, 100% { height: 6px; }
           50% { height: 18px; }
+        }
+        @keyframes thinkingBar {
+          0%, 100% { height: 4px; opacity: 0.5; }
+          50% { height: 10px; opacity: 1; }
+        }
+
+        /* AI Activity Ring Animations */
+        @keyframes aiSpin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes aiPulse {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        @keyframes aiOrbit0 {
+          0% { transform: translate(-50%, -50%) rotate(0deg) translateX(24px) rotate(0deg); }
+          100% { transform: translate(-50%, -50%) rotate(360deg) translateX(24px) rotate(-360deg); }
+        }
+        @keyframes aiOrbit1 {
+          0% { transform: translate(-50%, -50%) rotate(120deg) translateX(24px) rotate(-120deg); }
+          100% { transform: translate(-50%, -50%) rotate(480deg) translateX(24px) rotate(-480deg); }
+        }
+        @keyframes aiOrbit2 {
+          0% { transform: translate(-50%, -50%) rotate(240deg) translateX(24px) rotate(-240deg); }
+          100% { transform: translate(-50%, -50%) rotate(600deg) translateX(24px) rotate(-600deg); }
         }
       `}</style>
     </div>
