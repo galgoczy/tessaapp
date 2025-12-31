@@ -213,6 +213,7 @@ class SpeechRecognitionService {
 
 /**
  * Speech Synthesis (Text-to-Speech)
+ * Uses Google Cloud TTS API for high quality, falls back to browser TTS
  */
 class SpeechSynthesisService {
   constructor() {
@@ -225,6 +226,8 @@ class SpeechSynthesisService {
     this.onStart = null;
     this.onEnd = null;
     this.onError = null;
+    this.audioElement = null;
+    this.useCloudTTS = true; // Try cloud TTS first
   }
 
   /**
@@ -307,9 +310,98 @@ class SpeechSynthesisService {
   }
 
   /**
-   * Speak text
+   * Speak text - tries Google Cloud TTS first, falls back to browser
    */
   speak(text, options = {}) {
+    const language = options.language || this.language;
+
+    // Try cloud TTS first for better quality
+    if (this.useCloudTTS) {
+      this.speakWithCloudTTS(text, language);
+      return true;
+    }
+
+    // Fallback to browser TTS
+    return this.speakWithBrowserTTS(text, options);
+  }
+
+  /**
+   * Speak using Google Cloud TTS API
+   */
+  async speakWithCloudTTS(text, language) {
+    try {
+      console.log('TTS: Trying Google Cloud TTS...');
+      if (this.onStart) this.onStart();
+
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, language }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data.fallback) {
+        console.log('TTS: Cloud TTS not available, falling back to browser');
+        this.speakWithBrowserTTS(text, { language });
+        return;
+      }
+
+      if (data.audio) {
+        await this.playAudioBase64(data.audio, data.format || 'mp3');
+      }
+    } catch (error) {
+      console.error('TTS: Cloud TTS error:', error);
+      // Fallback to browser TTS
+      this.speakWithBrowserTTS(text, { language });
+    }
+  }
+
+  /**
+   * Play base64 encoded audio
+   */
+  async playAudioBase64(base64Audio, format = 'mp3') {
+    return new Promise((resolve, reject) => {
+      // Stop any currently playing audio
+      this.stopAudio();
+
+      // Create audio element
+      this.audioElement = new Audio();
+      this.audioElement.src = `data:audio/${format};base64,${base64Audio}`;
+
+      this.audioElement.onended = () => {
+        console.log('TTS: Audio playback ended');
+        if (this.onEnd) this.onEnd();
+        resolve();
+      };
+
+      this.audioElement.onerror = (error) => {
+        console.error('TTS: Audio playback error:', error);
+        if (this.onError) this.onError(error);
+        reject(error);
+      };
+
+      this.audioElement.play()
+        .then(() => console.log('TTS: Playing Google Cloud audio'))
+        .catch(reject);
+    });
+  }
+
+  /**
+   * Stop audio playback
+   */
+  stopAudio() {
+    if (this.audioElement) {
+      this.audioElement.pause();
+      this.audioElement.currentTime = 0;
+      this.audioElement = null;
+    }
+  }
+
+  /**
+   * Speak using browser's built-in TTS (fallback)
+   */
+  speakWithBrowserTTS(text, options = {}) {
     // Safari fix: always get fresh reference to speechSynthesis
     this.synth = window.speechSynthesis;
 
@@ -318,10 +410,10 @@ class SpeechSynthesisService {
       return false;
     }
 
-    console.log('TTS: Starting speech synthesis...');
+    console.log('TTS: Using browser TTS...');
 
     // Cancel any ongoing speech
-    this.stop();
+    this.stopBrowserTTS();
 
     // Safari workaround: voices may not be loaded yet
     if (this.voices.length === 0) {
@@ -339,17 +431,17 @@ class SpeechSynthesisService {
     console.log('TTS: Using voice:', utterance.voice?.name || 'default', 'lang:', utterance.lang);
 
     utterance.onstart = () => {
-      console.log('TTS: Speech started');
+      console.log('TTS: Browser speech started');
       if (this.onStart) this.onStart();
     };
 
     utterance.onend = () => {
-      console.log('TTS: Speech ended');
+      console.log('TTS: Browser speech ended');
       if (this.onEnd) this.onEnd();
     };
 
     utterance.onerror = (event) => {
-      console.error('TTS: Speech synthesis error:', event.error);
+      console.error('TTS: Browser speech error:', event.error);
       if (this.onError) this.onError(event.error);
     };
 
@@ -361,7 +453,6 @@ class SpeechSynthesisService {
     this.synth.speak(utterance);
 
     // Safari workaround: keep synthesis active with periodic resume
-    // Safari pauses synthesis when it's not in focus
     const safariResumeInterval = setInterval(() => {
       if (!this.synth.speaking) {
         clearInterval(safariResumeInterval);
@@ -377,12 +468,20 @@ class SpeechSynthesisService {
   }
 
   /**
-   * Stop speaking
+   * Stop browser TTS
    */
-  stop() {
+  stopBrowserTTS() {
     if (this.synth) {
       this.synth.cancel();
     }
+  }
+
+  /**
+   * Stop speaking (both cloud audio and browser TTS)
+   */
+  stop() {
+    this.stopAudio();
+    this.stopBrowserTTS();
   }
 
   /**
@@ -407,7 +506,10 @@ class SpeechSynthesisService {
    * Check if currently speaking
    */
   isSpeaking() {
-    return this.synth ? this.synth.speaking : false;
+    // Check both cloud audio and browser TTS
+    const audioPlaying = this.audioElement && !this.audioElement.paused;
+    const browserSpeaking = this.synth ? this.synth.speaking : false;
+    return audioPlaying || browserSpeaking;
   }
 
   /**
