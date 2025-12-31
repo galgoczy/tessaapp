@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import WaveAnimation from './WaveAnimation';
 import { sendMessage, generateGreeting, getSystemLanguage } from '../../services/AIService';
+import speechService from '../../services/SpeechService';
 
 // Icons
 const Icons = {
@@ -63,8 +64,11 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
   const [wavePhase, setWavePhase] = useState(0);
   const [textInput, setTextInput] = useState('');
   const [conversation, setConversation] = useState([]);
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [speechCapabilities, setSpeechCapabilities] = useState({ speechToText: false, textToSpeech: false });
   const conversationEndRef = useRef(null);
   const initialMessageProcessed = useRef(false);
+  const speechInitialized = useRef(false);
 
   const isPro = settings?.isPro || false;
   const data = useMemo(() => ({ tasks, notes, events }), [tasks, notes, events]);
@@ -77,6 +81,55 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
   // Get language from settings or system
   const language = settings?.language || getSystemLanguage();
 
+  // Initialize speech service
+  useEffect(() => {
+    if (!speechInitialized.current) {
+      speechService.init({ language });
+      setSpeechCapabilities(speechService.getCapabilities());
+      speechInitialized.current = true;
+    }
+
+    // Set up speech callbacks
+    speechService.setCallbacks({
+      onSpeechResult: ({ transcript, isFinal }) => {
+        if (isFinal) {
+          setInterimTranscript('');
+          if (transcript.trim()) {
+            processInput(transcript.trim());
+          }
+        } else {
+          setInterimTranscript(transcript);
+        }
+      },
+      onSpeechError: (error) => {
+        console.error('Speech recognition error:', error);
+        setIsListening(false);
+        setInterimTranscript('');
+      },
+      onSpeechStart: () => {
+        setIsListening(true);
+      },
+      onSpeechEnd: () => {
+        setIsListening(false);
+      },
+      onSpeakStart: () => {
+        setIsSpeaking(true);
+      },
+      onSpeakEnd: () => {
+        setIsSpeaking(false);
+      },
+      onSpeakError: (error) => {
+        console.error('Speech synthesis error:', error);
+        setIsSpeaking(false);
+      },
+    });
+  }, [language]);
+
+  // Update speech service language when it changes
+  useEffect(() => {
+    speechService.setLanguage(language);
+  }, [language]);
+
   // Initial greeting on open
   useEffect(() => {
     if (isOpen && conversation.length === 0) {
@@ -88,10 +141,15 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
       // Auto-enable voice mode for Pro users
       if (isPro && initialVoiceMode) {
         setVoiceMode(true);
-        simulateSpeaking();
+        // Speak greeting after a short delay
+        setTimeout(() => {
+          if (speechCapabilities.textToSpeech) {
+            speechService.speak(greeting, { language });
+          }
+        }, 300);
       }
     }
-  }, [isOpen, conversation.length, settings, isPro, initialVoiceMode]);
+  }, [isOpen, conversation.length, settings, isPro, initialVoiceMode, language, speechCapabilities.textToSpeech]);
 
   // Process initial message (from briefing "Ask Tessa")
   useEffect(() => {
@@ -116,22 +174,24 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
   // Reset on close
   useEffect(() => {
     if (!isOpen) {
+      speechService.stopListening();
+      speechService.stopSpeaking();
       setIsListening(false);
       setIsProcessing(false);
       setIsSpeaking(false);
       setTextInput('');
+      setInterimTranscript('');
       setConversation([]);
       initialMessageProcessed.current = false;
     }
   }, [isOpen]);
 
-  // Simulate Tessa speaking (for Pro users)
-  const simulateSpeaking = useCallback((duration = 2000) => {
-    if (isPro && voiceMode) {
-      setIsSpeaking(true);
-      setTimeout(() => setIsSpeaking(false), duration);
+  // Tessa speaks response (real TTS when available)
+  const speakResponse = useCallback((text) => {
+    if (voiceMode && speechCapabilities.textToSpeech) {
+      speechService.speak(text, { language });
     }
-  }, [isPro, voiceMode]);
+  }, [voiceMode, speechCapabilities.textToSpeech, language]);
 
   const processInput = useCallback(async (input) => {
     if (!input.trim()) return;
@@ -164,10 +224,9 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         type: response.type,
       }]);
 
-      // Simulate voice response for Pro users
+      // Speak response if voice mode is enabled
       if (voiceMode && response.success) {
-        const speakDuration = Math.min(response.message.length * 35, 5000);
-        simulateSpeaking(speakDuration);
+        speakResponse(response.message);
       }
     } catch (error) {
       console.error('Error processing input:', error);
@@ -179,7 +238,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
     } finally {
       setIsProcessing(false);
     }
-  }, [data, settings, conversation, voiceMode, simulateSpeaking]);
+  }, [data, settings, conversation, voiceMode, speakResponse]);
 
   const handleSubmit = (e) => {
     e?.preventDefault();
@@ -193,8 +252,21 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
     processInput(suggestion);
   };
 
-  const handleVoiceEnd = () => {
-    if (isListening) {
+  // Start/stop voice recognition
+  const startListening = useCallback(() => {
+    if (speechCapabilities.speechToText) {
+      speechService.startListening();
+    } else {
+      // Fallback: show demo mode
+      setIsListening(true);
+    }
+  }, [speechCapabilities.speechToText]);
+
+  const stopListening = useCallback(() => {
+    if (speechCapabilities.speechToText) {
+      speechService.stopListening();
+    } else {
+      // Fallback demo mode - simulate voice input
       setIsListening(false);
       const demoQueriesByLang = {
         en: ["What are my tasks for today?", "Show me my calendar", "Help me plan my day", "What should I start with?"],
@@ -207,7 +279,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
       const randomQuery = demoQueries[Math.floor(Math.random() * demoQueries.length)];
       processInput(randomQuery);
     }
-  };
+  }, [speechCapabilities.speechToText, language, processInput]);
 
   const handleFileUpload = () => {
     // Placeholder for file upload
@@ -293,7 +365,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
               Tessa
             </p>
             <p style={{ color: theme.textSecondary, fontSize: 12, margin: 0 }}>
-              {isSpeaking ? 'Speaking...' : isProcessing ? 'Thinking...' : isListening ? 'Listening...' : 'Ready to help'}
+              {isSpeaking ? 'Speaking...' : isProcessing ? 'Thinking...' : isListening ? (interimTranscript || 'Listening...') : 'Ready to help'}
             </p>
           </div>
         </div>
@@ -482,14 +554,31 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
       {isListening && (
         <div style={{
           display: 'flex',
-          justifyContent: 'center',
+          flexDirection: 'column',
+          alignItems: 'center',
           marginBottom: 16,
+          gap: 12,
         }}>
           <WaveAnimation
             phase={wavePhase}
             isActive={true}
             colors={[theme.accent, theme.accentLight, theme.secondary]}
           />
+          {interimTranscript && (
+            <p style={{
+              color: theme.textSecondary,
+              fontSize: 14,
+              fontStyle: 'italic',
+              textAlign: 'center',
+              margin: 0,
+              padding: '8px 16px',
+              background: theme.surfaceGlass,
+              borderRadius: 12,
+              maxWidth: '90%',
+            }}>
+              "{interimTranscript}"
+            </p>
+          )}
         </div>
       )}
 
@@ -588,11 +677,11 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         {/* Mic button */}
         {!textInput.trim() && (
           <button
-            onMouseDown={() => setIsListening(true)}
-            onMouseUp={handleVoiceEnd}
-            onMouseLeave={handleVoiceEnd}
-            onTouchStart={() => setIsListening(true)}
-            onTouchEnd={handleVoiceEnd}
+            onMouseDown={startListening}
+            onMouseUp={stopListening}
+            onMouseLeave={stopListening}
+            onTouchStart={startListening}
+            onTouchEnd={stopListening}
             style={{
               width: 48,
               height: 48,
