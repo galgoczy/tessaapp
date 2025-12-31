@@ -5,7 +5,7 @@
  */
 
 const GEMINI_API_KEY = 'AIzaSyDdyHkDrtUuFwbPeqTDaGMDcwHHjnDeHx0';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
 // Supported languages
 export const SUPPORTED_LANGUAGES = {
