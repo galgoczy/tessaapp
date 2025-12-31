@@ -10,7 +10,7 @@ import { useData } from '../../context/DataContext';
  */
 const MorningBrief = ({ onClick }) => {
   const { theme, isFilledStyle } = useTheme();
-  const { tasks } = useData();
+  const { tasks, settings } = useData();
 
   // Calculate today's stats
   const todayStats = useMemo(() => {
@@ -82,9 +82,10 @@ const MorningBrief = ({ onClick }) => {
   // Get greeting based on time
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Morning Brief';
-    if (hour < 18) return 'Afternoon Check-in';
-    return 'Evening Summary';
+    const name = settings?.userName || 'User';
+    if (hour < 12) return `Good Morning, ${name}`;
+    if (hour < 18) return `Good Afternoon, ${name}`;
+    return `Good Evening, ${name}`;
   };
 
   return (

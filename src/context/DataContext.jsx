@@ -16,6 +16,20 @@ const STORAGE_KEYS = {
   TAGS: 'tessa_tags',
   CONTACTS: 'tessa_contacts',
   EVENTS: 'tessa_events',
+  SETTINGS: 'tessa_settings',
+};
+
+// Default settings
+const DEFAULT_SETTINGS = {
+  userName: 'User',
+  tessaVoice: 'natural',
+  wakeWordEnabled: false,
+  continuousConversation: false,
+  remindersEnabled: true,
+  proactiveSuggestions: true,
+  dailySummaryEnabled: true,
+  dailySummaryTime: '08:00',
+  isPro: false,
 };
 
 // Create context
@@ -69,6 +83,12 @@ export const DataProvider = ({ children }) => {
     return stored ? JSON.parse(stored) : [];
   });
 
+  // Settings
+  const [settings, setSettings] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : DEFAULT_SETTINGS;
+  });
+
   // === PERSISTENCE ===
 
   useEffect(() => {
@@ -98,6 +118,39 @@ export const DataProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(events));
   }, [events]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+  }, [settings]);
+
+  // === SETTINGS ACTIONS ===
+
+  const updateSettings = useCallback((updates) => {
+    setSettings(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const exportData = useCallback(() => {
+    const data = {
+      categories,
+      projects,
+      tasks,
+      notes,
+      tags,
+      contacts,
+      events,
+      settings,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tessa-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [categories, projects, tasks, notes, tags, contacts, events, settings]);
 
   // === CATEGORY ACTIONS ===
 
@@ -532,6 +585,11 @@ export const DataProvider = ({ children }) => {
     tags,
     contacts,
     events,
+    settings,
+
+    // Settings actions
+    updateSettings,
+    exportData,
 
     // Category actions
     addCategory,

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import ColorThemePicker from './ColorThemePicker';
 import SettingsItem from './SettingsItem';
@@ -87,10 +88,28 @@ const SettingsIcon = ({ name, color, size = 22 }) => {
         <line x1="21" y1="12" x2="9" y2="12" />
       </svg>
     ),
+    check: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    ),
   };
 
   return icons[name] || null;
 };
+
+// Voice options
+const VOICE_OPTIONS = [
+  { id: 'natural', name: 'Natural', description: 'Calm and clear' },
+  { id: 'friendly', name: 'Friendly', description: 'Warm and casual' },
+  { id: 'professional', name: 'Professional', description: 'Formal and precise' },
+];
+
+// Time options for daily summary
+const TIME_OPTIONS = [
+  '06:00', '06:30', '07:00', '07:30', '08:00', '08:30',
+  '09:00', '09:30', '10:00', '18:00', '19:00', '20:00',
+];
 
 /**
  * SettingsScreen Component
@@ -103,9 +122,44 @@ const SettingsIcon = ({ name, color, size = 22 }) => {
  */
 const SettingsScreen = ({ onBack }) => {
   const { theme, isDark, toggleMode } = useTheme();
+  const { settings, updateSettings, exportData } = useData();
+
+  const [showVoicePicker, setShowVoicePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [editingName, setEditingName] = useState(settings.userName);
 
   // Helper to render icon
   const icon = (name) => <SettingsIcon name={name} color={theme.accent} />;
+
+  const handleVoiceSelect = (voiceId) => {
+    updateSettings({ tessaVoice: voiceId });
+    setShowVoicePicker(false);
+  };
+
+  const handleTimeSelect = (time) => {
+    updateSettings({ dailySummaryTime: time });
+    setShowTimePicker(false);
+  };
+
+  const handleSaveName = () => {
+    if (editingName.trim()) {
+      updateSettings({ userName: editingName.trim() });
+    }
+    setShowProfileEdit(false);
+  };
+
+  const handleExport = () => {
+    exportData();
+  };
+
+  const formatTime = (time) => {
+    const [hours, minutes] = time.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
 
   return (
     <div style={{ minHeight: '100vh', paddingBottom: 40 }}>
@@ -206,24 +260,27 @@ const SettingsScreen = ({ onBack }) => {
             <SettingsItem
               icon={icon('mic')}
               label="Tessa Voice"
-              description="Natural"
+              description={VOICE_OPTIONS.find(v => v.id === settings.tessaVoice)?.name || 'Natural'}
               type="arrow"
+              onClick={() => setShowVoicePicker(true)}
             />
             <SettingsItem
               icon={icon('waveform')}
               label="Hey Tessa"
               description="Wake word activation"
               type="toggle"
-              value={false}
-              pro
+              value={settings.wakeWordEnabled}
+              onChange={(val) => settings.isPro && updateSettings({ wakeWordEnabled: val })}
+              pro={!settings.isPro}
             />
             <SettingsItem
               icon={icon('messageCircle')}
               label="Continuous Conversation"
               description="Keep talking without tapping"
               type="toggle"
-              value={false}
-              pro
+              value={settings.continuousConversation}
+              onChange={(val) => settings.isPro && updateSettings({ continuousConversation: val })}
+              pro={!settings.isPro}
               isLast
             />
           </GlassCard>
@@ -248,20 +305,23 @@ const SettingsScreen = ({ onBack }) => {
               label="Reminders"
               description="Get notified about tasks"
               type="toggle"
-              value={true}
+              value={settings.remindersEnabled}
+              onChange={(val) => updateSettings({ remindersEnabled: val })}
             />
             <SettingsItem
               icon={icon('lightbulb')}
               label="Proactive Suggestions"
               description="Tessa suggests actions"
               type="toggle"
-              value={true}
+              value={settings.proactiveSuggestions}
+              onChange={(val) => updateSettings({ proactiveSuggestions: val })}
             />
             <SettingsItem
               icon={icon('clock')}
               label="Daily Summary"
-              description="Every day at 8:00 AM"
+              description={settings.dailySummaryEnabled ? `Every day at ${formatTime(settings.dailySummaryTime)}` : 'Disabled'}
               type="arrow"
+              onClick={() => setShowTimePicker(true)}
               isLast
             />
           </GlassCard>
@@ -284,21 +344,27 @@ const SettingsScreen = ({ onBack }) => {
             <SettingsItem
               icon={icon('user')}
               label="Profile"
-              description="Geri"
+              description={settings.userName}
               type="arrow"
+              onClick={() => {
+                setEditingName(settings.userName);
+                setShowProfileEdit(true);
+              }}
             />
             <SettingsItem
               icon={icon('star')}
               label="Tessa PRO"
-              description="Upgrade for more features"
+              description={settings.isPro ? 'Active' : 'Upgrade for more features'}
               type="arrow"
-              highlight
+              highlight={!settings.isPro}
+              onClick={() => updateSettings({ isPro: !settings.isPro })}
             />
             <SettingsItem
               icon={icon('download')}
               label="Export Data"
               description="Download your information"
               type="arrow"
+              onClick={handleExport}
             />
             <SettingsItem
               icon={icon('logOut')}
@@ -316,9 +382,239 @@ const SettingsScreen = ({ onBack }) => {
           textAlign: 'center',
           marginTop: 24,
         }}>
-          Tessa v1.0.0
+          Tessa v1.0.0 {settings.isPro && '• PRO'}
         </p>
       </div>
+
+      {/* Voice Picker Modal */}
+      {showVoicePicker && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20,
+        }} onClick={() => setShowVoicePicker(false)}>
+          <GlassCard
+            theme={theme}
+            style={{ width: '100%', maxWidth: 320, padding: 20 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ color: theme.text, fontSize: 18, fontWeight: 600, margin: '0 0 16px' }}>
+              Select Voice
+            </h3>
+            {VOICE_OPTIONS.map(voice => (
+              <button
+                key={voice.id}
+                onClick={() => handleVoiceSelect(voice.id)}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  background: settings.tessaVoice === voice.id ? `${theme.accent}20` : 'transparent',
+                  border: `1px solid ${settings.tessaVoice === voice.id ? theme.accent : theme.border}`,
+                  borderRadius: 12,
+                  marginBottom: 8,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ color: theme.text, fontSize: 15, fontWeight: 500, margin: 0 }}>
+                    {voice.name}
+                  </p>
+                  <p style={{ color: theme.textSecondary, fontSize: 13, margin: '2px 0 0' }}>
+                    {voice.description}
+                  </p>
+                </div>
+                {settings.tessaVoice === voice.id && (
+                  <SettingsIcon name="check" color={theme.accent} size={20} />
+                )}
+              </button>
+            ))}
+          </GlassCard>
+        </div>
+      )}
+
+      {/* Time Picker Modal */}
+      {showTimePicker && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20,
+        }} onClick={() => setShowTimePicker(false)}>
+          <GlassCard
+            theme={theme}
+            style={{ width: '100%', maxWidth: 320, padding: 20 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ color: theme.text, fontSize: 18, fontWeight: 600, margin: '0 0 8px' }}>
+              Daily Summary Time
+            </h3>
+
+            {/* Enable/Disable toggle */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 0',
+              marginBottom: 12,
+              borderBottom: `1px solid ${theme.border}`,
+            }}>
+              <span style={{ color: theme.text, fontSize: 14 }}>Enable daily summary</span>
+              <button
+                onClick={() => updateSettings({ dailySummaryEnabled: !settings.dailySummaryEnabled })}
+                style={{
+                  width: 48,
+                  height: 28,
+                  borderRadius: 14,
+                  background: settings.dailySummaryEnabled ? theme.accent : theme.border,
+                  border: 'none',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  transition: 'background 0.2s',
+                }}
+              >
+                <div style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 11,
+                  background: '#fff',
+                  position: 'absolute',
+                  top: 3,
+                  left: settings.dailySummaryEnabled ? 23 : 3,
+                  transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
+
+            {settings.dailySummaryEnabled && (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 8,
+              }}>
+                {TIME_OPTIONS.map(time => (
+                  <button
+                    key={time}
+                    onClick={() => handleTimeSelect(time)}
+                    style={{
+                      padding: '10px 8px',
+                      background: settings.dailySummaryTime === time ? theme.accent : 'transparent',
+                      border: `1px solid ${settings.dailySummaryTime === time ? theme.accent : theme.border}`,
+                      borderRadius: 8,
+                      color: settings.dailySummaryTime === time ? '#fff' : theme.text,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {formatTime(time)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        </div>
+      )}
+
+      {/* Profile Edit Modal */}
+      {showProfileEdit && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20,
+        }} onClick={() => setShowProfileEdit(false)}>
+          <GlassCard
+            theme={theme}
+            style={{ width: '100%', maxWidth: 320, padding: 20 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ color: theme.text, fontSize: 18, fontWeight: 600, margin: '0 0 16px' }}>
+              Edit Profile
+            </h3>
+
+            <label style={{
+              display: 'block',
+              color: theme.textSecondary,
+              fontSize: 13,
+              marginBottom: 8
+            }}>
+              Your name
+            </label>
+            <input
+              type="text"
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              placeholder="Enter your name"
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                background: theme.surfaceGlass,
+                border: `1px solid ${theme.border}`,
+                borderRadius: 10,
+                color: theme.text,
+                fontSize: 15,
+                marginBottom: 16,
+                outline: 'none',
+              }}
+            />
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => setShowProfileEdit(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'transparent',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 10,
+                  color: theme.text,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveName}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: theme.accent,
+                  border: 'none',
+                  borderRadius: 10,
+                  color: '#fff',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </GlassCard>
+        </div>
+      )}
     </div>
   );
 };

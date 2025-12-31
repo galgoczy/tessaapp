@@ -13,8 +13,10 @@ import GlassCard from '../ui/GlassCard';
  */
 const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
   const { theme } = useTheme();
-  const { tasks, categories } = useData();
+  const { tasks, categories, settings } = useData();
   const [isPlaying, setIsPlaying] = useState(false);
+
+  const userName = settings?.userName || 'there';
 
   // Get today's data
   const todayData = useMemo(() => {
@@ -62,7 +64,7 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
     if (hour >= 12 && hour < 18) greeting = 'Good afternoon';
     if (hour >= 18) greeting = 'Good evening';
 
-    let summary = `${greeting}, Geri! `;
+    let summary = `${greeting}, ${userName}! `;
 
     if (todayData.activeCount === 0) {
       summary += "You're all caught up! No pending tasks.";
@@ -105,7 +107,7 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
     }
 
     return summary;
-  }, [todayData, categories]);
+  }, [todayData, categories, userName]);
 
   if (!isOpen) return null;
 
@@ -217,14 +219,18 @@ const BriefingOverlay = ({ isOpen, onClose, onAskTessa }) => {
               {isPlaying ? 'Tessa is reading...' : 'Let Tessa read this'}
             </p>
             <p style={{ color: theme.textSecondary, fontSize: 12, margin: 0 }}>
-              <span style={{
-                background: theme.gradient,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontWeight: 600,
-              }}>
-                PRO
-              </span>
+              {settings?.isPro ? (
+                <span style={{ color: theme.accent }}>Voice enabled</span>
+              ) : (
+                <span style={{
+                  background: theme.gradient,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontWeight: 600,
+                }}>
+                  PRO
+                </span>
+              )}
             </p>
           </div>
 

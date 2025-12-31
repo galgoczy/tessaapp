@@ -15,6 +15,7 @@ const SettingsItem = ({
   type = 'arrow', // 'toggle', 'arrow', 'none'
   value,
   onChange,
+  onClick,
   pro = false,
   highlight = false,
   isLast = false,
@@ -24,22 +25,26 @@ const SettingsItem = ({
   const handleClick = () => {
     if (type === 'toggle' && onChange) {
       onChange(!value);
+    } else if (type === 'arrow' && onClick) {
+      onClick();
     }
   };
+
+  const isClickable = (type === 'toggle' && onChange) || (type === 'arrow' && onClick);
 
   // Check if icon is a React element (SVG) or string (emoji)
   const isReactElement = React.isValidElement(icon);
 
   return (
     <div
-      onClick={type === 'toggle' ? handleClick : undefined}
+      onClick={isClickable ? handleClick : undefined}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 14,
         padding: 16,
         borderBottom: isLast ? 'none' : `1px solid ${theme.border}`,
-        cursor: type === 'toggle' ? 'pointer' : 'default',
+        cursor: isClickable ? 'pointer' : 'default',
         transition: 'background 0.2s',
       }}
     >
