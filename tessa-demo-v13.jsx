@@ -735,10 +735,10 @@ I'd recommend tackling Peter's email first, then Sarah's designs before your 10 
         </div>
 
         {/* Morning Brief - Glass Card */}
-        <GlassCard 
-          onClick={() => setBriefingOpen(true)} 
+        <GlassCard
+          onClick={() => setBriefingOpen(true)}
           glow
-          style={{ padding: 18, marginBottom: 40, display: 'flex', alignItems: 'center', gap: 14 }}
+          style={{ padding: 18, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 14 }}
         >
           <div style={{ 
             width: 48, 
@@ -759,16 +759,16 @@ I'd recommend tackling Peter's email first, then Sarah's designs before your 10 
         </GlassCard>
 
         {/* Quote */}
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
           textAlign: 'center',
           opacity: quoteOpacity,
           transition: 'opacity 0.5s',
-          minHeight: 200,
+          minHeight: 140,
         }}>
           <p style={{ color: t.purple, fontSize: 11, letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase', fontWeight: 500 }}>Daily Inspiration</p>
           <p style={{ color: t.text, fontSize: 22, fontWeight: 500, fontStyle: 'italic', lineHeight: 1.4, margin: '0 0 12px', maxWidth: 300 }}>
@@ -778,11 +778,11 @@ I'd recommend tackling Peter's email first, then Sarah's designs before your 10 
         </div>
 
         {/* Your Stuff - Lower position */}
-        <div style={{ 
-          textAlign: 'center', 
-          paddingTop: 40,
-          paddingBottom: 60, 
-          opacity: quoteOpacity, 
+        <div style={{
+          textAlign: 'center',
+          paddingTop: 20,
+          paddingBottom: 40,
+          opacity: quoteOpacity,
           transition: 'opacity 0.5s',
         }}>
           <p className="shimmer" style={{ 
