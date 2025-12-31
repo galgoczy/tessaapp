@@ -148,7 +148,7 @@ I'd recommend tackling Peter's email first, then Sarah's designs before your 10 
     </div>
   );
 
-  // Voice Overlay - Liquid Glass Style
+  // Voice Overlay - Liquid Glass Style with Speech-Reactive PTT Button
   const VoiceOverlay = () => {
     if (!voiceOpen) return null;
 
@@ -200,52 +200,130 @@ I'd recommend tackling Peter's email first, then Sarah's designs before your 10 
             Talk with Tessa
           </p>
 
-          <p style={{ color: t.text, fontSize: 18, fontWeight: 500, marginBottom: 24, textAlign: 'center' }}>
+          <p style={{ color: t.text, fontSize: 18, fontWeight: 500, marginBottom: 32, textAlign: 'center' }}>
             {isListening ? 'Listening...' : 'Tap and hold to speak'}
           </p>
 
-          {/* Wave */}
-          <svg width={240} height={50} style={{ marginBottom: 24 }}>
-            {[0, 1, 2].map(i => (
-              <path
-                key={i}
-                d={Array.from({ length: 40 }, (_, j) => {
-                  const x = (j / 39) * 240;
-                  const y = 25 + Math.sin((j / 39) * Math.PI * 3 + wavePhase + i * 0.8) * (isListening ? 18 : 6) * (1 - i * 0.25);
-                  return `${j === 0 ? 'M' : 'L'} ${x} ${y}`;
-                }).join(' ')}
-                fill="none"
-                stroke={i === 0 ? t.orange : i === 1 ? t.pink : t.purple}
-                strokeWidth={2.5 - i * 0.5}
-                opacity={0.8 - i * 0.2}
-                strokeLinecap="round"
-              />
-            ))}
-          </svg>
+          {/* Speech-Reactive PTT Button */}
+          <div style={{ position: 'relative', marginBottom: 32 }}>
+            {/* Outer pulse rings - only visible when listening */}
+            {isListening && (
+              <>
+                <div className="ptt-ring-1" style={{
+                  position: 'absolute',
+                  inset: -20,
+                  borderRadius: '50%',
+                  border: `2px solid ${t.orange}`,
+                  opacity: 0,
+                }} />
+                <div className="ptt-ring-2" style={{
+                  position: 'absolute',
+                  inset: -20,
+                  borderRadius: '50%',
+                  border: `2px solid ${t.pink}`,
+                  opacity: 0,
+                }} />
+                <div className="ptt-ring-3" style={{
+                  position: 'absolute',
+                  inset: -20,
+                  borderRadius: '50%',
+                  border: `2px solid ${t.purple}`,
+                  opacity: 0,
+                }} />
+              </>
+            )}
 
-          {/* Tessa Orb */}
-          <div style={{ position: 'relative', width: 80, height: 80, marginBottom: 24 }}>
-            <div className="orb-glow" style={{
+            {/* Glow effect behind button */}
+            <div className={isListening ? 'ptt-glow-active' : ''} style={{
               position: 'absolute',
               inset: -16,
               borderRadius: '50%',
               background: t.gradient,
-              filter: 'blur(24px)',
-              opacity: isListening ? 0.5 : 0.25,
+              filter: 'blur(20px)',
+              opacity: isListening ? 0.6 : 0.2,
+              transition: 'opacity 0.3s',
             }} />
-            <div className="orb-ring" style={{
+
+            {/* Main PTT Button */}
+            <button
+              onMouseDown={() => setIsListening(true)}
+              onMouseUp={() => setIsListening(false)}
+              onMouseLeave={() => setIsListening(false)}
+              onTouchStart={(e) => { e.preventDefault(); setIsListening(true); }}
+              onTouchEnd={() => setIsListening(false)}
+              className={isListening ? 'ptt-button-active' : ''}
+              style={{
+                position: 'relative',
+                width: 100,
+                height: 100,
+                borderRadius: '50%',
+                background: isListening ? t.gradient : t.surfaceGlass,
+                border: `3px solid ${isListening ? 'transparent' : t.border}`,
+                backdropFilter: 'blur(10px)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'transform 0.15s, border 0.2s',
+                boxShadow: isListening
+                  ? `0 0 40px ${t.orange}50, inset 0 0 20px rgba(255,255,255,0.2)`
+                  : `0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)`,
+                transform: isListening ? 'scale(1.05)' : 'scale(1)',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Shimmer effect on button when not active */}
+              {!isListening && (
+                <div className="ptt-shimmer" style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: `linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%)`,
+                  transform: 'translateX(-100%)',
+                }} />
+              )}
+
+              {/* Audio bars when listening */}
+              {isListening ? (
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center', height: 32 }}>
+                  {[0, 1, 2, 3, 4].map(i => (
+                    <div
+                      key={i}
+                      className="ptt-audio-bar"
+                      style={{
+                        width: 4,
+                        height: 8,
+                        background: 'white',
+                        borderRadius: 2,
+                        animationDelay: `${i * 0.1}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <svg width={32} height={32} viewBox="0 0 24 24" fill={t.textMuted}>
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {/* Tessa Orb - smaller, below the PTT */}
+          <div style={{ position: 'relative', width: 50, height: 50, marginBottom: 24 }}>
+            <div className="orb-glow" style={{
               position: 'absolute',
-              inset: -8,
+              inset: -10,
               borderRadius: '50%',
-              border: `2px solid ${t.orange}`,
-              opacity: 0.3,
+              background: t.gradient,
+              filter: 'blur(16px)',
+              opacity: isListening ? 0.5 : 0.25,
             }} />
             <div className="orb-core" style={{
               position: 'absolute',
               inset: 0,
               borderRadius: '50%',
               background: t.gradient,
-              boxShadow: `inset 0 -8px 16px rgba(0,0,0,0.3), inset 0 4px 8px rgba(255,255,255,0.2)`,
+              boxShadow: `inset 0 -5px 10px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.2)`,
             }}>
               <div style={{
                 position: 'absolute',
@@ -260,36 +338,8 @@ I'd recommend tackling Peter's email first, then Sarah's designs before your 10 
             </div>
           </div>
 
-          {/* Mic */}
-          <button
-            onMouseDown={() => setIsListening(true)}
-            onMouseUp={() => setIsListening(false)}
-            onMouseLeave={() => setIsListening(false)}
-            onTouchStart={() => setIsListening(true)}
-            onTouchEnd={() => setIsListening(false)}
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: '50%',
-              background: isListening ? t.blue : t.surfaceGlass,
-              border: `2px solid ${isListening ? t.blue : t.border}`,
-              backdropFilter: 'blur(10px)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-              boxShadow: isListening ? `0 0 24px ${t.blue}40` : 'none',
-            }}
-          >
-            <svg width={22} height={22} viewBox="0 0 24 24" fill={isListening ? 'white' : t.textMuted}>
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V23h2v-2.06A9 9 0 0 0 21 12v-2h-2z" />
-            </svg>
-          </button>
-
           {/* Suggestions */}
-          <div style={{ marginTop: 24, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
             {['My day', 'Emails', 'New task'].map(s => (
               <button key={s} style={{
                 background: t.surface,
@@ -306,16 +356,52 @@ I'd recommend tackling Peter's email first, then Sarah's designs before your 10 
         </GlassCard>
 
         <style>{`
+          /* PTT Button animations */
+          .ptt-ring-1 { animation: ptt-ring-expand 1.5s ease-out infinite; }
+          .ptt-ring-2 { animation: ptt-ring-expand 1.5s ease-out infinite 0.3s; }
+          .ptt-ring-3 { animation: ptt-ring-expand 1.5s ease-out infinite 0.6s; }
+
+          @keyframes ptt-ring-expand {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(2); opacity: 0; }
+          }
+
+          .ptt-glow-active { animation: ptt-glow-pulse 0.8s ease-in-out infinite; }
+
+          @keyframes ptt-glow-pulse {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+          }
+
+          .ptt-audio-bar { animation: ptt-audio-bounce 0.5s ease-in-out infinite alternate; }
+
+          @keyframes ptt-audio-bounce {
+            0% { height: 8px; }
+            100% { height: 24px; }
+          }
+
+          .ptt-shimmer { animation: ptt-shimmer-slide 3s ease-in-out infinite; }
+
+          @keyframes ptt-shimmer-slide {
+            0% { transform: translateX(-100%); }
+            50%, 100% { transform: translateX(100%); }
+          }
+
+          .ptt-button-active { animation: ptt-vibrate 0.15s ease-in-out infinite; }
+
+          @keyframes ptt-vibrate {
+            0%, 100% { transform: scale(1.05) rotate(0deg); }
+            25% { transform: scale(1.05) rotate(0.5deg); }
+            75% { transform: scale(1.05) rotate(-0.5deg); }
+          }
+
+          /* Orb animations */
           .orb-glow { animation: glow-pulse 3s ease-in-out infinite; }
-          .orb-ring { animation: ring-pulse 3s ease-in-out infinite; }
           .orb-core { animation: core-pulse 3s ease-in-out infinite; }
+
           @keyframes glow-pulse {
             0%, 100% { transform: scale(1); opacity: 0.25; }
             50% { transform: scale(1.15); opacity: 0.4; }
-          }
-          @keyframes ring-pulse {
-            0%, 100% { transform: scale(1); opacity: 0.3; }
-            50% { transform: scale(1.1); opacity: 0.15; }
           }
           @keyframes core-pulse {
             0%, 100% { transform: scale(1); }
