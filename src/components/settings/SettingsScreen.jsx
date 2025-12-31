@@ -88,6 +88,13 @@ const SettingsIcon = ({ name, color, size = 22 }) => {
         <line x1="21" y1="12" x2="9" y2="12" />
       </svg>
     ),
+    globe: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="2" y1="12" x2="22" y2="12" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      </svg>
+    ),
     check: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12" />
@@ -103,6 +110,16 @@ const VOICE_OPTIONS = [
   { id: 'natural', name: 'Natural', description: 'Calm and clear' },
   { id: 'friendly', name: 'Friendly', description: 'Warm and casual' },
   { id: 'professional', name: 'Professional', description: 'Formal and precise' },
+];
+
+// Language options
+const LANGUAGE_OPTIONS = [
+  { id: null, name: 'System Default', nativeName: 'Auto-detect' },
+  { id: 'en', name: 'English', nativeName: 'English' },
+  { id: 'hu', name: 'Hungarian', nativeName: 'Magyar' },
+  { id: 'de', name: 'German', nativeName: 'Deutsch' },
+  { id: 'es', name: 'Spanish', nativeName: 'Español' },
+  { id: 'fr', name: 'French', nativeName: 'Français' },
 ];
 
 // Time options for daily summary
@@ -126,6 +143,7 @@ const SettingsScreen = ({ onBack }) => {
 
   const [showVoicePicker, setShowVoicePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [editingName, setEditingName] = useState(settings.userName);
 
@@ -135,6 +153,16 @@ const SettingsScreen = ({ onBack }) => {
   const handleVoiceSelect = (voiceId) => {
     updateSettings({ tessaVoice: voiceId });
     setShowVoicePicker(false);
+  };
+
+  const handleLanguageSelect = (langId) => {
+    updateSettings({ language: langId });
+    setShowLanguagePicker(false);
+  };
+
+  const getLanguageDisplay = () => {
+    const lang = LANGUAGE_OPTIONS.find(l => l.id === settings.language);
+    return lang ? lang.nativeName : 'System Default';
   };
 
   const handleTimeSelect = (time) => {
@@ -240,6 +268,31 @@ const SettingsScreen = ({ onBack }) => {
               </div>
               <ColorThemePicker />
             </div>
+          </GlassCard>
+        </section>
+
+        {/* Language Section */}
+        <section style={{ marginBottom: 32 }}>
+          <p style={{
+            color: theme.textSecondary,
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: 1,
+            marginBottom: 12,
+            textTransform: 'uppercase',
+          }}>
+            Language
+          </p>
+
+          <GlassCard theme={theme} style={{ padding: 0, overflow: 'hidden' }}>
+            <SettingsItem
+              icon={icon('globe')}
+              label="Tessa Language"
+              description={getLanguageDisplay()}
+              type="arrow"
+              onClick={() => setShowLanguagePicker(true)}
+              isLast
+            />
           </GlassCard>
         </section>
 
@@ -385,6 +438,63 @@ const SettingsScreen = ({ onBack }) => {
           Tessa v1.0.0 {settings.isPro && '• PRO'}
         </p>
       </div>
+
+      {/* Language Picker Modal */}
+      {showLanguagePicker && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20,
+        }} onClick={() => setShowLanguagePicker(false)}>
+          <GlassCard
+            theme={theme}
+            style={{ width: '100%', maxWidth: 320, padding: 20 }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ color: theme.text, fontSize: 18, fontWeight: 600, margin: '0 0 16px' }}>
+              Select Language
+            </h3>
+            {LANGUAGE_OPTIONS.map(lang => (
+              <button
+                key={lang.id ?? 'auto'}
+                onClick={() => handleLanguageSelect(lang.id)}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  background: settings.language === lang.id ? `${theme.accent}20` : 'transparent',
+                  border: `1px solid ${settings.language === lang.id ? theme.accent : theme.border}`,
+                  borderRadius: 12,
+                  marginBottom: 8,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ color: theme.text, fontSize: 15, fontWeight: 500, margin: 0 }}>
+                    {lang.nativeName}
+                  </p>
+                  {lang.name !== lang.nativeName && (
+                    <p style={{ color: theme.textSecondary, fontSize: 13, margin: '2px 0 0' }}>
+                      {lang.name}
+                    </p>
+                  )}
+                </div>
+                {settings.language === lang.id && (
+                  <SettingsIcon name="check" color={theme.accent} size={20} />
+                )}
+              </button>
+            ))}
+          </GlassCard>
+        </div>
+      )}
 
       {/* Voice Picker Modal */}
       {showVoicePicker && (

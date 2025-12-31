@@ -3,7 +3,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import WaveAnimation from './WaveAnimation';
-import { sendMessage, generateGreeting } from '../../services/AIService';
+import { sendMessage, generateGreeting, getSystemLanguage } from '../../services/AIService';
 
 // Icons
 const Icons = {
@@ -74,11 +74,14 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
 
+  // Get language from settings or system
+  const language = settings?.language || getSystemLanguage();
+
   // Initial greeting on open
   useEffect(() => {
     if (isOpen && conversation.length === 0) {
       const userName = settings?.userName || '';
-      const greeting = generateGreeting(userName);
+      const greeting = generateGreeting(userName, language);
 
       setConversation([{ role: 'tessa', message: greeting, type: 'greeting' }]);
 
@@ -193,12 +196,14 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
   const handleVoiceEnd = () => {
     if (isListening) {
       setIsListening(false);
-      const demoQueries = [
-        "Mik a mai feladataim?",
-        "Mutasd a naptáramat",
-        "Segíts megtervezni a napomat",
-        "Mivel kellene kezdenem?",
-      ];
+      const demoQueriesByLang = {
+        en: ["What are my tasks for today?", "Show me my calendar", "Help me plan my day", "What should I start with?"],
+        hu: ["Mik a mai feladataim?", "Mutasd a naptáramat", "Segíts megtervezni a napomat", "Mivel kellene kezdenem?"],
+        de: ["Was sind meine Aufgaben für heute?", "Zeig mir meinen Kalender", "Hilf mir meinen Tag zu planen", "Womit soll ich anfangen?"],
+        es: ["¿Cuáles son mis tareas para hoy?", "Muéstrame mi calendario", "Ayúdame a planificar mi día", "¿Por dónde debería empezar?"],
+        fr: ["Quelles sont mes tâches pour aujourd'hui ?", "Montre-moi mon calendrier", "Aide-moi à planifier ma journée", "Par quoi devrais-je commencer ?"],
+      };
+      const demoQueries = demoQueriesByLang[language] || demoQueriesByLang.en;
       const randomQuery = demoQueries[Math.floor(Math.random() * demoQueries.length)];
       processInput(randomQuery);
     }
@@ -216,7 +221,15 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
 
   if (!isOpen) return null;
 
-  const suggestions = ['Mai napom', 'Feladataim', 'Mivel kezdjek?', 'Segíts tervezni'];
+  // Language-aware suggestions
+  const suggestionsByLang = {
+    en: ['My day', 'My tasks', 'What should I start with?', 'Help me plan'],
+    hu: ['Mai napom', 'Feladataim', 'Mivel kezdjek?', 'Segíts tervezni'],
+    de: ['Mein Tag', 'Meine Aufgaben', 'Womit soll ich anfangen?', 'Hilf mir planen'],
+    es: ['Mi día', 'Mis tareas', '¿Por dónde empiezo?', 'Ayúdame a planificar'],
+    fr: ['Ma journée', 'Mes tâches', 'Par quoi commencer ?', 'Aide-moi à planifier'],
+  };
+  const suggestions = suggestionsByLang[language] || suggestionsByLang.en;
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -530,7 +543,13 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
             type="text"
             value={textInput}
             onChange={(e) => setTextInput(e.target.value)}
-            placeholder="Kérdezz Tessától bármit..."
+            placeholder={
+              language === 'hu' ? "Kérdezz Tessától bármit..." :
+              language === 'de' ? "Frag Tessa alles..." :
+              language === 'es' ? "Pregúntale a Tessa lo que quieras..." :
+              language === 'fr' ? "Demandez n'importe quoi à Tessa..." :
+              "Ask Tessa anything..."
+            }
             style={{
               width: '100%',
               padding: '12px 16px',

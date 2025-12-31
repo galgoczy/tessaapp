@@ -24,6 +24,7 @@ const STORAGE_KEYS = {
 // Default settings
 const DEFAULT_SETTINGS = {
   userName: 'User',
+  language: null, // null = use system language, or 'en', 'hu', 'de', 'es', 'fr'
   tessaVoice: 'natural',
   wakeWordEnabled: false,
   continuousConversation: false,

@@ -7,26 +7,121 @@
 const GEMINI_API_KEY = 'AIzaSyDdyHkDrtUuFwbPeqTDaGMDcwHHjnDeHx0';
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
+// Supported languages
+export const SUPPORTED_LANGUAGES = {
+  en: { code: 'en', name: 'English', nativeName: 'English' },
+  hu: { code: 'hu', name: 'Hungarian', nativeName: 'Magyar' },
+  de: { code: 'de', name: 'German', nativeName: 'Deutsch' },
+  es: { code: 'es', name: 'Spanish', nativeName: 'Español' },
+  fr: { code: 'fr', name: 'French', nativeName: 'Français' },
+};
+
+// Detect system language
+export const getSystemLanguage = () => {
+  if (typeof navigator !== 'undefined') {
+    const lang = navigator.language?.split('-')[0] || 'en';
+    return SUPPORTED_LANGUAGES[lang] ? lang : 'en';
+  }
+  return 'en';
+};
+
+// Language-specific strings
+const STRINGS = {
+  en: {
+    dateFormat: 'en-US',
+    timeOfDay: { morning: 'morning', afternoon: 'afternoon', evening: 'evening' },
+    greeting: {
+      morning: (name) => `Good morning${name ? `, ${name}` : ''}! How can I help you today?`,
+      afternoon: (name) => `Good afternoon${name ? `, ${name}` : ''}! What can I do for you?`,
+      evening: (name) => `Good evening${name ? `, ${name}` : ''}! How can I assist you?`,
+    },
+    error: "Sorry, I couldn't process that. Please try again!",
+    noTasks: 'No active tasks',
+    noNotes: 'No notes',
+    noEvents: 'No events today',
+    emptyNote: 'Empty note',
+    due: 'due',
+  },
+  hu: {
+    dateFormat: 'hu-HU',
+    timeOfDay: { morning: 'délelőtt', afternoon: 'délután', evening: 'este' },
+    greeting: {
+      morning: (name) => `Jó reggelt${name ? `, ${name}` : ''}! Miben segíthetek ma?`,
+      afternoon: (name) => `Szép napot${name ? `, ${name}` : ''}! Hogyan segíthetek?`,
+      evening: (name) => `Jó estét${name ? `, ${name}` : ''}! Miben lehetek a segítségedre?`,
+    },
+    error: 'Sajnálom, nem sikerült feldolgozni. Kérlek, próbáld újra!',
+    noTasks: 'Nincsenek aktív feladatok',
+    noNotes: 'Nincsenek jegyzetek',
+    noEvents: 'Nincsenek mai események',
+    emptyNote: 'Üres jegyzet',
+    due: 'határidő',
+  },
+  de: {
+    dateFormat: 'de-DE',
+    timeOfDay: { morning: 'Vormittag', afternoon: 'Nachmittag', evening: 'Abend' },
+    greeting: {
+      morning: (name) => `Guten Morgen${name ? `, ${name}` : ''}! Wie kann ich dir heute helfen?`,
+      afternoon: (name) => `Guten Tag${name ? `, ${name}` : ''}! Was kann ich für dich tun?`,
+      evening: (name) => `Guten Abend${name ? `, ${name}` : ''}! Wie kann ich dir helfen?`,
+    },
+    error: 'Entschuldigung, das konnte ich nicht verarbeiten. Bitte versuche es erneut!',
+    noTasks: 'Keine aktiven Aufgaben',
+    noNotes: 'Keine Notizen',
+    noEvents: 'Keine Termine heute',
+    emptyNote: 'Leere Notiz',
+    due: 'fällig',
+  },
+  es: {
+    dateFormat: 'es-ES',
+    timeOfDay: { morning: 'mañana', afternoon: 'tarde', evening: 'noche' },
+    greeting: {
+      morning: (name) => `¡Buenos días${name ? `, ${name}` : ''}! ¿Cómo puedo ayudarte hoy?`,
+      afternoon: (name) => `¡Buenas tardes${name ? `, ${name}` : ''}! ¿Qué puedo hacer por ti?`,
+      evening: (name) => `¡Buenas noches${name ? `, ${name}` : ''}! ¿En qué puedo ayudarte?`,
+    },
+    error: 'Lo siento, no pude procesarlo. ¡Por favor, inténtalo de nuevo!',
+    noTasks: 'No hay tareas activas',
+    noNotes: 'No hay notas',
+    noEvents: 'No hay eventos hoy',
+    emptyNote: 'Nota vacía',
+    due: 'vence',
+  },
+  fr: {
+    dateFormat: 'fr-FR',
+    timeOfDay: { morning: 'matin', afternoon: 'après-midi', evening: 'soir' },
+    greeting: {
+      morning: (name) => `Bonjour${name ? `, ${name}` : ''} ! Comment puis-je vous aider aujourd'hui ?`,
+      afternoon: (name) => `Bon après-midi${name ? `, ${name}` : ''} ! Que puis-je faire pour vous ?`,
+      evening: (name) => `Bonsoir${name ? `, ${name}` : ''} ! Comment puis-je vous aider ?`,
+    },
+    error: "Désolé, je n'ai pas pu traiter cela. Veuillez réessayer !",
+    noTasks: 'Aucune tâche active',
+    noNotes: 'Aucune note',
+    noEvents: "Pas d'événements aujourd'hui",
+    emptyNote: 'Note vide',
+    due: 'échéance',
+  },
+};
+
 /**
  * Build the system prompt with context about the user's data
  */
-const buildSystemPrompt = (context) => {
-  const { userName, tasks, notes, events, settings } = context;
+const buildSystemPrompt = (context, language = 'en') => {
+  const { userName, tasks, notes, events } = context;
+  const strings = STRINGS[language] || STRINGS.en;
   const today = new Date();
-  const todayStr = today.toLocaleDateString('hu-HU', {
+  const todayStr = today.toLocaleDateString(strings.dateFormat, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
   const hour = today.getHours();
+  const timeOfDay = hour < 12 ? strings.timeOfDay.morning : hour < 18 ? strings.timeOfDay.afternoon : strings.timeOfDay.evening;
 
   // Calculate task statistics
   const activeTasks = tasks.filter(t => !t.isCompleted);
-  const todayTasks = activeTasks.filter(t => {
-    if (!t.dueDate) return false;
-    return new Date(t.dueDate).toDateString() === today.toDateString();
-  });
   const urgentTasks = activeTasks.filter(t => t.priority === 'high');
   const completedToday = tasks.filter(t => {
     if (!t.completedAt) return false;
@@ -36,13 +131,13 @@ const buildSystemPrompt = (context) => {
   // Build task list for context
   const taskList = activeTasks.slice(0, 10).map(t => {
     const priority = t.priority === 'high' ? '🔴' : t.priority === 'medium' ? '🟡' : '🟢';
-    const due = t.dueDate ? ` (határidő: ${new Date(t.dueDate).toLocaleDateString('hu-HU')})` : '';
+    const due = t.dueDate ? ` (${strings.due}: ${new Date(t.dueDate).toLocaleDateString(strings.dateFormat)})` : '';
     return `- ${priority} ${t.title}${due}`;
   }).join('\n');
 
   // Build notes summary
   const recentNotes = notes.slice(0, 5).map(n => {
-    const preview = n.content?.substring(0, 50) || n.title || 'Üres jegyzet';
+    const preview = n.content?.substring(0, 50) || n.title || strings.emptyNote;
     return `- ${preview}${n.content?.length > 50 ? '...' : ''}`;
   }).join('\n');
 
@@ -52,51 +147,56 @@ const buildSystemPrompt = (context) => {
     return eventDate.toDateString() === today.toDateString();
   });
   const eventList = todayEvents.map(e => {
-    const time = e.startTime ? new Date(e.startTime).toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' }) : '';
+    const time = e.startTime ? new Date(e.startTime).toLocaleTimeString(strings.dateFormat, { hour: '2-digit', minute: '2-digit' }) : '';
     return `- ${time ? time + ' ' : ''}${e.title}`;
   }).join('\n');
 
-  return `Te vagy Tessa, egy személyes AI asszisztens. Barátságos, segítőkész és hatékony vagy.
+  const langName = SUPPORTED_LANGUAGES[language]?.name || 'English';
 
-FONTOS SZABÁLYOK:
-- Mindig magyarul válaszolj, kivéve ha a felhasználó más nyelven ír
-- Legyél tömör és lényegre törő (max 2-3 mondat, hacsak nem kérnek részletesebb választ)
-- Használj megfelelő érzelmeket és empátiát
-- Ha a felhasználó feladatot, jegyzetet vagy eseményt szeretne létrehozni, kérdezz rá a részletekre
-- NE találj ki adatokat! Csak azt mondd, amit valóban tudsz
+  return `You are Tessa, a personal AI assistant. You are friendly, helpful, and efficient.
 
-JELENLEGI KONTEXTUS:
-- Mai dátum: ${todayStr}
-- Napszak: ${hour < 12 ? 'délelőtt' : hour < 18 ? 'délután' : 'este'}
-- Felhasználó neve: ${userName || 'Felhasználó'}
+IMPORTANT RULES:
+- Always respond in ${langName}
+- Be concise and to the point (max 2-3 sentences unless asked for more detail)
+- Use appropriate emotions and empathy
+- If the user wants to create a task, note, or event, ask for details
+- DO NOT make up data! Only say what you actually know
 
-FELHASZNÁLÓ ADATAI:
-📋 Feladatok (${activeTasks.length} aktív, ${urgentTasks.length} sürgős, ${completedToday.length} ma teljesített):
-${taskList || 'Nincsenek aktív feladatok'}
+CURRENT CONTEXT:
+- Today's date: ${todayStr}
+- Time of day: ${timeOfDay}
+- User's name: ${userName || 'User'}
 
-📝 Legutóbbi jegyzetei (${notes.length} összesen):
-${recentNotes || 'Nincsenek jegyzetei'}
+USER'S DATA:
+📋 Tasks (${activeTasks.length} active, ${urgentTasks.length} urgent, ${completedToday.length} completed today):
+${taskList || strings.noTasks}
 
-📅 Mai események:
-${eventList || 'Nincsenek mai események'}
+📝 Recent notes (${notes.length} total):
+${recentNotes || strings.noNotes}
 
-KÉPESSÉGEID:
-- Feladatok áttekintése, tanácsadás a prioritásokról
-- Napi összefoglalók készítése
-- Jegyzetekkel kapcsolatos segítség
-- Naptár és események áttekintése
-- Motiváció és produktivitási tanácsok
-- Általános beszélgetés
+📅 Today's events:
+${eventList || strings.noEvents}
 
-Ha a felhasználó valamit szeretne LÉTREHOZNI (feladat, jegyzet, esemény), jelezd, hogy ezt az alkalmazásban tudja megtenni, de segíts megfogalmazni a részleteket.`;
+YOUR CAPABILITIES:
+- Review tasks, advise on priorities
+- Create daily summaries
+- Help with notes
+- Review calendar and events
+- Motivation and productivity tips
+- General conversation
+
+If the user wants to CREATE something (task, note, event), let them know they can do this in the app, but help them formulate the details.`;
 };
 
 /**
  * Send a message to Gemini API and get a response
  */
 export const sendMessage = async (userMessage, conversationHistory, context) => {
+  const language = context.settings?.language || getSystemLanguage();
+  const strings = STRINGS[language] || STRINGS.en;
+
   try {
-    const systemPrompt = buildSystemPrompt(context);
+    const systemPrompt = buildSystemPrompt(context, language);
 
     // Build conversation contents for Gemini
     const contents = [];
@@ -115,43 +215,47 @@ export const sendMessage = async (userMessage, conversationHistory, context) => 
       parts: [{ text: userMessage }]
     });
 
+    const requestBody = {
+      contents,
+      systemInstruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 500,
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+      ],
+    };
+
+    console.log('Sending request to Gemini API...');
+
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        contents,
-        systemInstruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 500,
-        },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Gemini API error:', errorData);
-      throw new Error(errorData.error?.message || 'API request failed');
-    }
-
     const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Gemini API error:', data);
+      throw new Error(data.error?.message || `API error: ${response.status}`);
+    }
 
     // Extract the response text
     const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!responseText) {
+      console.error('No response text in:', data);
       throw new Error('No response from API');
     }
 
@@ -163,10 +267,10 @@ export const sendMessage = async (userMessage, conversationHistory, context) => 
   } catch (error) {
     console.error('AIService error:', error);
 
-    // Fallback response in case of error
+    // Return error with details for debugging
     return {
       success: false,
-      message: 'Sajnálom, jelenleg nem tudok válaszolni. Kérlek, próbáld újra később!',
+      message: `${strings.error}\n\n(Debug: ${error.message})`,
       type: 'error',
       error: error.message,
     };
@@ -174,22 +278,25 @@ export const sendMessage = async (userMessage, conversationHistory, context) => 
 };
 
 /**
- * Generate a greeting based on time of day
+ * Generate a greeting based on time of day and language
  */
-export const generateGreeting = (userName) => {
+export const generateGreeting = (userName, language = null) => {
+  const lang = language || getSystemLanguage();
+  const strings = STRINGS[lang] || STRINGS.en;
   const hour = new Date().getHours();
-  const name = userName || 'itt';
 
   if (hour < 12) {
-    return `Jó reggelt, ${name}! Miben segíthetek ma?`;
+    return strings.greeting.morning(userName);
   } else if (hour < 18) {
-    return `Szép napot, ${name}! Hogyan segíthetek?`;
+    return strings.greeting.afternoon(userName);
   } else {
-    return `Jó estét, ${name}! Miben lehetek a segítségedre?`;
+    return strings.greeting.evening(userName);
   }
 };
 
 export default {
   sendMessage,
   generateGreeting,
+  getSystemLanguage,
+  SUPPORTED_LANGUAGES,
 };
