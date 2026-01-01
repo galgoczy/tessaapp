@@ -24,6 +24,9 @@ class DeepgramAgent extends VoiceAgentBase {
     this.apiEndpoint = config.apiEndpoint || '/api/voice-agent';
     this.language = config.language || 'en';
     this.systemPrompt = config.systemPrompt || this.getDefaultSystemPrompt();
+    // Audio buffer for batch mode (Vercel has no WebSocket support)
+    this.audioChunks = [];
+    this.isRecording = false;
   }
 
   getDefaultSystemPrompt() {
@@ -234,11 +237,15 @@ If asked about capabilities, mention you can help with:
   }
 
   /**
-   * Start capturing and sending audio
+   * Start capturing audio (buffers audio for batch transcription in polling mode)
    */
   async startAudioCapture() {
     try {
       console.log('DeepgramAgent: Starting audio capture...');
+
+      // Clear previous audio
+      this.audioChunks = [];
+      this.isRecording = true;
 
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -261,11 +268,18 @@ If asked about capabilities, mention you can help with:
       this.audioProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
 
       this.audioProcessor.onaudioprocess = (event) => {
-        if (!this.isProcessing) return;
+        if (!this.isRecording) return;
 
         const inputData = event.inputBuffer.getChannelData(0);
         const audioData = this.float32ToInt16(inputData);
-        this.sendAudio(audioData.buffer);
+
+        // In WebSocket mode, stream directly
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.ws.send(audioData.buffer);
+        } else {
+          // In polling mode, buffer audio for batch transcription
+          this.audioChunks.push(new Int16Array(audioData));
+        }
       };
 
       source.connect(this.audioProcessor);
@@ -283,6 +297,7 @@ If asked about capabilities, mention you can help with:
    * Stop audio capture
    */
   stopAudioCapture() {
+    this.isRecording = false;
     this.isProcessing = false;
 
     if (this.audioProcessor) {
@@ -309,30 +324,94 @@ If asked about capabilities, mention you can help with:
   }
 
   /**
-   * Stop listening (wrapper for stopAudioCapture)
+   * Stop listening and process buffered audio (for polling mode)
    */
-  stopListening() {
+  async stopListening() {
     this.stopAudioCapture();
+
+    // In polling mode, send buffered audio for transcription
+    if (!this.ws && this.audioChunks.length > 0) {
+      if (this.onStateChange) {
+        this.onStateChange({ connected: this.isConnected, state: 'thinking' });
+      }
+
+      try {
+        // Combine all audio chunks
+        const totalLength = this.audioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+        const combinedAudio = new Int16Array(totalLength);
+        let offset = 0;
+        for (const chunk of this.audioChunks) {
+          combinedAudio.set(chunk, offset);
+          offset += chunk.length;
+        }
+
+        console.log('DeepgramAgent: Sending audio for transcription...', {
+          chunks: this.audioChunks.length,
+          totalSamples: totalLength,
+          durationSecs: totalLength / 16000,
+        });
+
+        // Send for transcription
+        const transcript = await this.transcribeAudio(combinedAudio.buffer);
+
+        if (transcript && transcript.trim()) {
+          console.log('DeepgramAgent: Transcript:', transcript);
+
+          // Notify about transcript
+          if (this.onTranscript) {
+            this.onTranscript({ text: transcript, isFinal: true });
+          }
+
+          // Send to LLM for response
+          await this.sendText(transcript);
+        } else {
+          console.log('DeepgramAgent: No speech detected');
+        }
+      } catch (error) {
+        console.error('DeepgramAgent: Transcription failed:', error);
+        if (this.onError) this.onError(error);
+      } finally {
+        this.audioChunks = [];
+      }
+    }
+
     if (this.onStateChange) {
       this.onStateChange({ connected: this.isConnected, state: 'idle' });
     }
   }
 
   /**
-   * Send audio data to the agent
+   * Transcribe audio using Deepgram API via backend
    */
-  async sendAudio(audioData) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      // Send via WebSocket
-      this.ws.send(audioData);
-    } else if (this.sessionId) {
-      // Send via polling endpoint
-      await fetch(this.apiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/octet-stream' },
-        body: audioData,
-      });
+  async transcribeAudio(audioBuffer) {
+    const response = await fetch(this.apiEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'transcribe',
+        audio: this.arrayBufferToBase64(audioBuffer),
+        language: this.language,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Transcription failed: ${response.status}`);
     }
+
+    const data = await response.json();
+    return data.transcript || '';
+  }
+
+  /**
+   * Convert ArrayBuffer to Base64 for JSON transport
+   */
+  arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
   }
 
   /**

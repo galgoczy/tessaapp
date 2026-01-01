@@ -372,8 +372,11 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
     if (useDeepgram) {
       if (isListening) {
         console.log('Deepgram: Stopping listening...');
-        voiceAgent.stopListening();
         setIsListening(false);
+        setIsProcessing(true);
+        // stopListening is async - it transcribes and sends to LLM
+        await voiceAgent.stopListening();
+        setIsProcessing(false);
       } else {
         console.log('Deepgram: Starting listening...');
         // startListening auto-connects if needed

@@ -132,29 +132,58 @@ async function handleTranscribe(req, res) {
   }
 
   try {
-    // Get audio data from request body
-    const audioData = req.body;
+    const { audio, language } = req.body;
 
-    const response = await fetch(`${DEEPGRAM_API_URL}/listen?model=nova-2&smart_format=true`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${DEEPGRAM_API_KEY}`,
-        'Content-Type': 'audio/raw',
-      },
-      body: audioData,
+    if (!audio) {
+      return res.status(400).json({ error: 'Audio data is required' });
+    }
+
+    // Decode base64 audio
+    const audioBuffer = Buffer.from(audio, 'base64');
+
+    console.log('Transcribing audio:', {
+      bytes: audioBuffer.length,
+      language,
     });
 
+    // Map language codes for Deepgram
+    const langMap = {
+      en: 'en-US',
+      hu: 'hu',
+      de: 'de',
+      es: 'es',
+      fr: 'fr',
+    };
+    const dgLanguage = langMap[language] || 'en-US';
+
+    const response = await fetch(
+      `${DEEPGRAM_API_URL}/listen?model=nova-2&smart_format=true&language=${dgLanguage}&encoding=linear16&sample_rate=16000`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${DEEPGRAM_API_KEY}`,
+          'Content-Type': 'audio/raw',
+        },
+        body: audioBuffer,
+      }
+    );
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Deepgram API error:', response.status, errorText);
       throw new Error(`Deepgram API error: ${response.status}`);
     }
 
     const data = await response.json();
     const transcript = data.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+    const confidence = data.results?.channels?.[0]?.alternatives?.[0]?.confidence;
+
+    console.log('Transcription result:', { transcript, confidence });
 
     return res.status(200).json({
       success: true,
       transcript,
-      confidence: data.results?.channels?.[0]?.alternatives?.[0]?.confidence,
+      confidence,
     });
   } catch (error) {
     console.error('Transcription error:', error);
