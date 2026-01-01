@@ -146,7 +146,41 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
     provider: useDeepgram ? VoiceAgentProviders.DEEPGRAM : VoiceAgentProviders.BASIC,
     language: settings?.language || 'en',
     autoConnect: false,
+    onTranscript: useDeepgram ? (text, isFinal) => {
+      if (isFinal) {
+        setInterimTranscript('');
+      } else {
+        setInterimTranscript(text);
+      }
+    } : null,
+    onResponse: useDeepgram ? (text, isFinal) => {
+      if (isFinal) {
+        setConversation(prev => [...prev, {
+          role: 'tessa',
+          message: text,
+          type: 'ai_response',
+        }]);
+        setIsProcessing(false);
+      }
+    } : null,
+    onError: useDeepgram ? (error) => {
+      console.error('Deepgram error:', error);
+      setIsProcessing(false);
+      setIsListening(false);
+    } : null,
   });
+
+  // Sync voiceAgent state with local state
+  useEffect(() => {
+    if (useDeepgram) {
+      setIsListening(voiceAgent.isListening);
+      setIsProcessing(voiceAgent.isProcessing);
+      setIsSpeaking(voiceAgent.isSpeaking);
+      if (voiceAgent.interimTranscript) {
+        setInterimTranscript(voiceAgent.interimTranscript);
+      }
+    }
+  }, [useDeepgram, voiceAgent.isListening, voiceAgent.isProcessing, voiceAgent.isSpeaking, voiceAgent.interimTranscript]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -244,6 +278,11 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
   // Reset on close
   useEffect(() => {
     if (!isOpen) {
+      // Stop Deepgram if active
+      if (useDeepgram && voiceAgent.isConnected) {
+        voiceAgent.disconnect();
+      }
+      // Stop browser speech services
       speechService.stopListening();
       speechService.stopSpeaking();
       setIsListening(false);
@@ -254,7 +293,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
       setConversation([]);
       initialMessageProcessed.current = false;
     }
-  }, [isOpen]);
+  }, [isOpen, useDeepgram, voiceAgent]);
 
   // Tessa speaks response (real TTS when available)
   const speakResponse = useCallback((text) => {
@@ -328,7 +367,26 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
   };
 
   // Toggle voice recognition (tap to start, tap again to stop)
-  const toggleListening = useCallback(() => {
+  const toggleListening = useCallback(async () => {
+    // Use Deepgram Voice Agent when enabled
+    if (useDeepgram) {
+      if (isListening) {
+        console.log('Deepgram: Stopping listening...');
+        voiceAgent.stopListening();
+        setIsListening(false);
+      } else {
+        console.log('Deepgram: Starting listening...');
+        // Connect and start listening
+        if (!voiceAgent.isConnected) {
+          await voiceAgent.connect();
+        }
+        await voiceAgent.startListening();
+        setIsListening(true);
+      }
+      return;
+    }
+
+    // Default: Use browser Web Speech API
     if (speechCapabilities.speechToText) {
       if (isListening) {
         // Stop listening
@@ -356,7 +414,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         setIsListening(true);
       }
     }
-  }, [speechCapabilities.speechToText, isListening, language, processInput]);
+  }, [useDeepgram, voiceAgent, speechCapabilities.speechToText, isListening, language, processInput]);
 
   const handleFileUpload = () => {
     // Placeholder for file upload
