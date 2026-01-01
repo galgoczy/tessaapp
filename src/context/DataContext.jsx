@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
   tessaVoice: 'natural',
   wakeWordEnabled: false,
   continuousConversation: false,
+  useDeepgram: false, // Use Deepgram Voice Agent for real-time streaming
   remindersEnabled: true,
   proactiveSuggestions: true,
   dailySummaryEnabled: true,

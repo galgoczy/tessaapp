@@ -313,9 +313,10 @@ const SettingsScreen = ({ onBack }) => {
             <SettingsItem
               icon={icon('mic')}
               label="Tessa Voice"
-              description={VOICE_OPTIONS.find(v => v.id === settings.tessaVoice)?.name || 'Natural'}
+              description="Coming soon"
               type="arrow"
-              onClick={() => setShowVoicePicker(true)}
+              disabled={true}
+              onClick={() => {}}
             />
             <SettingsItem
               icon={icon('waveform')}
@@ -334,6 +335,14 @@ const SettingsScreen = ({ onBack }) => {
               value={settings.continuousConversation}
               onChange={(val) => settings.isPro && updateSettings({ continuousConversation: val })}
               pro={!settings.isPro}
+            />
+            <SettingsItem
+              icon={icon('waveform')}
+              label="Deepgram Voice Agent"
+              description="Real-time streaming voice (Beta)"
+              type="toggle"
+              value={settings.useDeepgram}
+              onChange={(val) => updateSettings({ useDeepgram: val })}
               isLast
             />
           </GlassCard>

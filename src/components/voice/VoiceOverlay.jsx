@@ -2,8 +2,11 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTheme } from '../../context/ThemeContext';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
+import AnimatedText from '../ui/AnimatedText';
 import { sendMessage, generateGreeting, getSystemLanguage } from '../../services/AIService';
 import speechService from '../../services/SpeechService';
+import { useVoiceAgent } from '../../hooks/useVoiceAgent';
+import { VoiceAgentProviders } from '../../services/VoiceAgentService';
 
 // Icons
 const Icons = {
@@ -135,7 +138,15 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
   const speechInitialized = useRef(false);
 
   const isPro = settings?.isPro || false;
+  const useDeepgram = settings?.useDeepgram || false;
   const data = useMemo(() => ({ tasks, notes, events }), [tasks, notes, events]);
+
+  // Deepgram Voice Agent (only active when enabled in settings)
+  const voiceAgent = useVoiceAgent({
+    provider: useDeepgram ? VoiceAgentProviders.DEEPGRAM : VoiceAgentProviders.BASIC,
+    language: settings?.language || 'en',
+    autoConnect: false,
+  });
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -434,9 +445,24 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
             </div>
           </AIActivityRing>
           <div>
-            <p style={{ color: theme.text, fontSize: 16, fontWeight: 600, margin: 0 }}>
-              Tessa
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <p style={{ color: theme.text, fontSize: 16, fontWeight: 600, margin: 0 }}>
+                Tessa
+              </p>
+              {useDeepgram && (
+                <span style={{
+                  background: '#10B981',
+                  color: 'white',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  borderRadius: 4,
+                  letterSpacing: 0.5,
+                }}>
+                  DEEPGRAM
+                </span>
+              )}
+            </div>
             <p style={{ color: theme.textSecondary, fontSize: 12, margin: 0 }}>
               {isSpeaking ? 'Speaking...' : isProcessing ? 'Thinking...' : isListening ? (interimTranscript || 'Listening...') : 'Ready to help'}
             </p>
@@ -496,7 +522,15 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
                 margin: 0,
                 whiteSpace: 'pre-line',
               }}>
-                {msg.message}
+                {msg.role === 'tessa' && i === conversation.length - 1 ? (
+                  <AnimatedText
+                    text={msg.message}
+                    speed={15}
+                    animate={true}
+                  />
+                ) : (
+                  msg.message
+                )}
               </p>
             </GlassCard>
             {msg.type === 'success' && (

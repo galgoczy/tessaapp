@@ -19,10 +19,12 @@ const SettingsItem = ({
   pro = false,
   highlight = false,
   isLast = false,
+  disabled = false,
 }) => {
   const { theme } = useTheme();
 
   const handleClick = () => {
+    if (disabled) return;
     if (type === 'toggle' && onChange) {
       onChange(!value);
     } else if (type === 'arrow' && onClick) {
@@ -30,7 +32,7 @@ const SettingsItem = ({
     }
   };
 
-  const isClickable = (type === 'toggle' && onChange) || (type === 'arrow' && onClick);
+  const isClickable = !disabled && ((type === 'toggle' && onChange) || (type === 'arrow' && onClick));
 
   // Check if icon is a React element (SVG) or string (emoji)
   const isReactElement = React.isValidElement(icon);
@@ -46,6 +48,7 @@ const SettingsItem = ({
         borderBottom: isLast ? 'none' : `1px solid ${theme.border}`,
         cursor: isClickable ? 'pointer' : 'default',
         transition: 'background 0.2s',
+        opacity: disabled ? 0.5 : 1,
       }}
     >
       {/* Icon - supports both emoji strings and SVG React elements */}
