@@ -299,6 +299,26 @@ If asked about capabilities, mention you can help with:
   }
 
   /**
+   * Start listening (wrapper for startAudioCapture)
+   */
+  async startListening() {
+    await this.startAudioCapture();
+    if (this.onStateChange) {
+      this.onStateChange({ connected: this.isConnected, state: 'listening' });
+    }
+  }
+
+  /**
+   * Stop listening (wrapper for stopAudioCapture)
+   */
+  stopListening() {
+    this.stopAudioCapture();
+    if (this.onStateChange) {
+      this.onStateChange({ connected: this.isConnected, state: 'idle' });
+    }
+  }
+
+  /**
    * Send audio data to the agent
    */
   async sendAudio(audioData) {

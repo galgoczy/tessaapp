@@ -376,10 +376,7 @@ const VoiceOverlay = ({ isOpen, onClose, onNavigate, initialMessage, voiceMode: 
         setIsListening(false);
       } else {
         console.log('Deepgram: Starting listening...');
-        // Connect and start listening
-        if (!voiceAgent.isConnected) {
-          await voiceAgent.connect();
-        }
+        // startListening auto-connects if needed
         await voiceAgent.startListening();
         setIsListening(true);
       }
