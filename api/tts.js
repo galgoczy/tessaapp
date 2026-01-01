@@ -113,6 +113,8 @@ export default async function handler(req, res) {
       success: true,
       audio: data.audioContent, // Base64 encoded MP3
       format: 'mp3',
+      voice: voice.name, // Debug: show which voice was used
+      provider: 'google-cloud',
     });
 
   } catch (error) {

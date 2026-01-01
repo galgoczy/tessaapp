@@ -330,7 +330,7 @@ class SpeechSynthesisService {
    */
   async speakWithCloudTTS(text, language) {
     try {
-      console.log('TTS: Trying Google Cloud TTS...');
+      console.log('TTS: Trying Google Cloud TTS...', { language, textLength: text.length });
       if (this.onStart) this.onStart();
 
       const response = await fetch('/api/tts', {
@@ -340,14 +340,22 @@ class SpeechSynthesisService {
       });
 
       const data = await response.json();
+      console.log('TTS: API response:', {
+        ok: response.ok,
+        provider: data.provider,
+        voice: data.voice,
+        fallback: data.fallback,
+        error: data.error
+      });
 
       if (!response.ok || data.fallback) {
-        console.log('TTS: Cloud TTS not available, falling back to browser');
+        console.log('TTS: Cloud TTS not available, falling back to browser. Reason:', data.error);
         this.speakWithBrowserTTS(text, { language });
         return;
       }
 
       if (data.audio) {
+        console.log('TTS: Playing Google Cloud audio with voice:', data.voice);
         await this.playAudioBase64(data.audio, data.format || 'mp3');
       }
     } catch (error) {
